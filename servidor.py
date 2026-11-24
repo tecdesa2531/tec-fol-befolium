@@ -105,7 +105,11 @@ class Manejador(BaseHTTPRequestHandler):
             if largo > LIMITE_CUERPO:
                 raise ValueError("La petición es demasiado grande.")
             datos = json.loads(self.rfile.read(largo) or b"{}")
-            if ruta == "/api/abrir":
+            if ruta == "/api/previsualizar":
+                _, proceso = configuracion.directorios()
+                self.json(200, aplicacion.previsualizar(str(datos.get("tracking", "")).strip(),
+                                                        str(datos.get("carpeta", "")).strip(), proceso))
+            elif ruta == "/api/abrir":
                 self.abrir(datos)
             elif ruta == "/api/cerrar":
                 ESTADO["app"] = None

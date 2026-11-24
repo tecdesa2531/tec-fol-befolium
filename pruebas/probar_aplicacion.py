@@ -73,6 +73,26 @@ class PruebasAbrir(Base):
             aplicacion.abrir("DEMOAP", self.carpeta / "no_existe", self.proceso)
 
 
+class PruebasPrevisualizar(Base):
+    def test_no_crea_nada(self):
+        otra = Path(self.tmp.name) / "nueva"
+        (otra / "010_Infraestructura").mkdir(parents=True)
+        p = aplicacion.previsualizar("NUEVAP", otra, self.proceso)
+        self.assertTrue(p["detectado"])
+        self.assertEqual(p["crear"], list(aplicacion.SUBCARPETAS))
+        self.assertEqual(list((otra / "010_Infraestructura").iterdir()), [])
+        self.assertFalse((self.proceso / "NUEVAP").exists())
+
+    def test_con_carpetas_existentes(self):
+        p = aplicacion.previsualizar("DEMOAP", self.carpeta, self.proceso)
+        self.assertEqual(p["crear"], [])
+        self.assertEqual(p["existentes"], list(aplicacion.SUBCARPETAS))
+
+    def test_errores(self):
+        with self.assertRaises(ValueError):
+            aplicacion.previsualizar("DEMOAP", self.carpeta / "no_existe", self.proceso)
+
+
 class PruebasCrear(Base):
     def test_plantillas_son_validas(self):
         self.crear_todo()

@@ -35,18 +35,24 @@ button.primario:hover{background:var(--azul-oscuro);border-color:var(--azul-oscu
 button:disabled{opacity:.45;cursor:default}
 button svg{width:16px;height:16px;flex:none}
 
-/* ---------- barra superior ---------- */
-#barra{position:relative;flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;
+/* ---------- barra superior: marca a la izquierda, pestanas al centro, acciones a la derecha ---------- */
+#barra{position:relative;flex:none;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;
   min-height:52px;padding:0 18px 2px;background:var(--panel)}
 #barra::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--degradado)}
-#barra .marca{font-weight:600;font-size:16px;letter-spacing:.2px}
-#barra .relleno{flex:1}
-#app-info{color:var(--suave);min-width:0;max-width:20vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#acciones{display:flex;flex-wrap:wrap;gap:8px;padding:6px 0}
-#acciones button{padding:6px 12px}
+#barra .marca{font-weight:600;font-size:16px;letter-spacing:.2px;white-space:nowrap}
+#app-info{font-weight:400;color:var(--suave)}
+#acciones{display:flex;gap:8px;justify-content:flex-end;align-items:center}
+#acciones .menu{position:relative}
+#btn-menu{padding:7px 12px;font-size:18px;line-height:1}
+#menu-acciones{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:200px;padding:6px;
+  background:var(--panel);border-radius:var(--radio);box-shadow:var(--sombra-dialogo)}
+#menu-acciones button{display:flex;width:100%;border:0;background:none;padding:8px 10px}
+#menu-acciones button:hover{background:var(--fondo)}
 
 /* ---------- pestanas ---------- */
-#pestanas{display:flex;gap:4px;align-self:stretch;margin-bottom:-2px}
+#pestanas{display:flex;gap:4px;align-self:stretch;margin-bottom:-2px;grid-column:2}
+#barra .marca{grid-column:1}
+#acciones{grid-column:3}
 #pestanas button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;
   padding:6px 12px;flex-direction:column;align-items:flex-start;gap:0;line-height:1.2;color:var(--suave)}
 #pestanas button:hover{background:none;color:var(--texto)}
@@ -81,9 +87,10 @@ a{color:var(--azul)}
 #panel-izq h2,#panel-der h2{font-size:13px;font-weight:600;color:var(--suave);margin:0 0 10px;
   text-transform:uppercase;letter-spacing:.6px}
 #centro{position:relative;min-height:0;display:flex;flex-direction:column;border-radius:var(--radio);overflow:hidden}
-#vista{flex:none;display:flex;align-items:center;gap:18px;padding:0 4px 8px;color:var(--suave);font-size:13px}
+#vista{position:absolute;right:20px;bottom:16px;z-index:5;display:flex;align-items:center;gap:12px;padding:6px 10px;
+  background:var(--panel);border-radius:var(--radio);box-shadow:var(--sombra);color:var(--suave);font-size:12px}
 #vista label{display:flex;align-items:center;gap:6px;margin:0;font-weight:400}
-#vista select{width:auto;margin:0;padding:3px 6px;border-radius:6px;border:1px solid var(--linea-fuerte);background:var(--panel)}
+#vista select{width:auto;margin:0;padding:2px 6px;border-radius:6px;border:1px solid var(--linea-fuerte);background:var(--panel)}
 #hoja{flex:1;width:100%;border:0;background:var(--fondo)}
 #aviso{flex:none;background:var(--aviso);padding:8px 14px;font-size:13px;border-radius:var(--radio);margin-bottom:8px}
 #aviso ul{margin:4px 0 0;padding-left:18px}

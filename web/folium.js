@@ -39,7 +39,8 @@
       if (!$("abrir-carpeta").value) $("abrir-carpeta").value = estado.carpeta_defecto;
       return;
     }
-    $("app-info").textContent = estado.tracking + " · " + estado.trabajo;
+    $("app-info").textContent = " · " + estado.tracking;
+    $("app-info").title = estado.trabajo;
     pintarPestanas();
     mostrarDocumento();
   }
@@ -135,14 +136,39 @@
   }
 
   /* ---------- abrir / cerrar ---------- */
+  /* abrir: primero se muestra que pasaria (sin crear nada) y luego se confirma */
+  const dlgAbrir = $("dlg-abrir");
   $("form-abrir").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     $("abrir-error").hidden = true;
     try {
+      const p = await api("/api/previsualizar", { tracking: $("abrir-tracking").value, carpeta: $("abrir-carpeta").value });
+      const c = $("abrir-contenido");
+      c.textContent = "";
+      c.appendChild(el("p", {}, ["Directorio de trabajo: ", el("code", { texto: p.trabajo })]));
+      c.appendChild(el("p", { class: "ayuda", texto: p.detectado
+        ? "Se detectó la carpeta 010_Infraestructura dentro de la carpeta que indicaste."
+        : "La carpeta que indicaste se usa como directorio de trabajo." }));
+      if (p.crear.length) {
+        c.appendChild(el("p", { texto: "Se crearán estas carpetas:" }));
+        const ul = el("ul");
+        p.crear.forEach((n) => ul.appendChild(el("li", {}, [el("code", { texto: n })])));
+        c.appendChild(ul);
+      } else {
+        c.appendChild(el("p", { texto: "Las carpetas 02_Documentacion, 03_Diagramas y 04_OperacionesManuales ya existen; no se crea nada." }));
+      }
+      c.appendChild(el("p", { class: "ayuda" }, ["Datos de proceso (privados): ", el("code", { texto: p.proceso })]));
+      dlgAbrir.showModal();
+    } catch (e) { $("abrir-error").hidden = false; $("abrir-error").textContent = e.message; }
+  });
+  $("abrir-cancelar").addEventListener("click", () => dlgAbrir.close());
+  $("abrir-confirmar").addEventListener("click", async () => {
+    try {
       estado = await api("/api/abrir", { tracking: $("abrir-tracking").value, carpeta: $("abrir-carpeta").value });
+      dlgAbrir.close();
       activo = "general";
       pintar();
-    } catch (e) { $("abrir-error").hidden = false; $("abrir-error").textContent = e.message; }
+    } catch (e) { dlgAbrir.close(); $("abrir-error").hidden = false; $("abrir-error").textContent = e.message; }
   });
 
   $("abrir-tracking").addEventListener("input", async (ev) => {
@@ -166,9 +192,24 @@
   $("vista-zoom").addEventListener("change", aplicarVista);
   $("vista-margenes").addEventListener("change", aplicarVista);
 
-  $("btn-cerrar").addEventListener("click", async () => { estado = await api("/api/cerrar", {}); pintar(); });
-  $("btn-recargar").addEventListener("click", cargarEstado);
-  $("btn-imprimir").addEventListener("click", () => { const h = $("hoja"); if (!h.hidden) h.contentWindow.print(); });
+  /* menu de acciones secundarias */
+  function menu(abrir) {
+    $("menu-acciones").hidden = !abrir;
+    $("btn-menu").setAttribute("aria-expanded", abrir ? "true" : "false");
+  }
+  $("btn-menu").addEventListener("click", (ev) => { ev.stopPropagation(); menu($("menu-acciones").hidden); });
+  document.addEventListener("click", () => menu(false));
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") menu(false); });
+
+  $("btn-cambiar").addEventListener("click", async () => {
+    menu(false);
+    estado = await api("/api/cerrar", {});
+    $("abrir-tracking").value = "";
+    $("abrir-carpeta").value = estado.carpeta_defecto;
+    pintar();
+  });
+  $("btn-recargar").addEventListener("click", () => { menu(false); cargarEstado(); });
+  $("btn-imprimir").addEventListener("click", () => { menu(false); const h = $("hoja"); if (!h.hidden) h.contentWindow.print(); });
   document.querySelectorAll("#pestanas button").forEach((b) =>
     b.addEventListener("click", () => { activo = b.dataset.doc; pintarPestanas(); mostrarDocumento(); }));
 

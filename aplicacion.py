@@ -52,6 +52,23 @@ def carpeta_recordada(proceso_raiz, tracking):
         return None
 
 
+def previsualizar(tracking, carpeta, proceso_raiz):
+    """Que pasaria al abrir, sin crear nada: directorio de trabajo y carpetas por crear."""
+    if not documentos.tracking_valido(tracking):
+        raise ValueError("El tracking code debe tener 6 letras o números.")
+    carpeta = Path(carpeta).expanduser()
+    if not carpeta.is_dir():
+        raise ValueError("La carpeta no existe: %s" % carpeta)
+    trabajo = resolver_trabajo(carpeta)
+    return {
+        "trabajo": str(trabajo),
+        "detectado": trabajo != carpeta,
+        "crear": [n for n in SUBCARPETAS if not (trabajo / n).exists()],
+        "existentes": [n for n in SUBCARPETAS if (trabajo / n).exists()],
+        "proceso": str(Path(proceso_raiz) / tracking.upper()),
+    }
+
+
 def abrir(tracking, carpeta, proceso_raiz):
     """Abre una aplicacion. Crea solo las carpetas que faltan (ver SUBCARPETAS)."""
     if not documentos.tracking_valido(tracking):
