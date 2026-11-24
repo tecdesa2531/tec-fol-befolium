@@ -15,7 +15,6 @@ PUERTO = int(os.environ.get("FOLIUM_PUERTO", "8765"))
 # Solo se sirven estos archivos; nada mas de disco.
 RUTAS = {
     "/": RAIZ / "web" / "inicio.html",
-    "/ajustes_impresion.css": RAIZ / "web" / "ajustes_impresion.css",
     "/referencia/general": RAIZ / "referencia" / "plantilla_documento_1_general.html",
     "/referencia/repositorio": RAIZ / "referencia" / "plantilla_documento_2_repositorio.html",
     "/referencia/compartidos": RAIZ / "referencia" / "plantilla_documento_3_compartidos.html",
@@ -35,15 +34,7 @@ class Manejador(BaseHTTPRequestHandler):
             msg = "Falta el archivo %s. Copialo ahi a mano: referencia/ no se sube a git." % archivo.name
             self.responder(404, msg.encode("utf-8"), "text/plain; charset=utf-8")
             return
-        cuerpo = archivo.read_bytes()
-        if archivo.suffix == ".css":
-            self.responder(200, cuerpo, "text/css; charset=utf-8")
-            return
-        if ruta.startswith("/referencia/"):
-            # ajustes de impresion de Folium sobre el CSS de la referencia
-            enlace = b'<link rel="stylesheet" href="/ajustes_impresion.css">\n</head>'
-            cuerpo = cuerpo.replace(b"</head>", enlace, 1)
-        self.responder(200, cuerpo, "text/html; charset=utf-8")
+        self.responder(200, archivo.read_bytes(), "text/html; charset=utf-8")
 
     def responder(self, codigo, cuerpo, tipo):
         self.send_response(codigo)
