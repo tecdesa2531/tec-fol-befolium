@@ -57,9 +57,27 @@ Contiene los HTML de referencia y los acuerdos. No se sube a git. Para probar la
 3. En Más ajustes, activa "Gráficos de fondo".
 4. Revisa fuentes, colores, portada y enlaces del índice.
 
+## Ver el visor con datos de prueba
+
+```powershell
+python herramientas/sembrar_prueba.py
+python servidor.py
+```
+
+Abre `http://localhost:8765/visor/DEMOAP/general` (también `repositorio` y `compartidos`). Los datos son inventados y quedan en `temp_pruebas/`.
+
+## Pruebas
+
+```powershell
+python pruebas/probar.py
+```
+
 ## Estructura
 
 - `servidor.py`: servidor local.
-- `web/`: páginas de la interfaz.
+- `documentos.py`, `validacion.py`, `visor.py`: cargador, validación y generador del HTML A4.
+- `web/`: página de inicio, CSS y paginador.
+- `pruebas/`: pruebas y datos inventados.
 - `herramientas/`: scripts de apoyo.
+- `docs/formato_json.md`: formato de los tres documentos.
 - `docs/decisiones.md`: decisiones y su motivo.

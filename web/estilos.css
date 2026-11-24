@@ -1,0 +1,123 @@
+/* =====================================================================
+   Medidas reales del Word de referencia
+   Hoja A4 = 210 x 297 mm (11906 x 16838 twips)
+   Margenes: superior/inferior 25 mm (1417), izquierdo/derecho 30 mm (1701)
+   Ancho util = 150 mm. Alto util = 247 mm.
+   Encabezado/pie a 12,5 mm del borde (708).
+   ===================================================================== */
+:root{
+  --ink:#1A1A1A; --muted:#595959; --h1:#0070C0; --brand:#0F4761; --link:#467886;
+  --line:#C9D3DD; --soft:#F3F7FB; --code:#EEF2F6;
+  --serif:Georgia,Gelasio,"Times New Roman",serif;
+  --century:"Century","Century Schoolbook","TeX Gyre Schola",Georgia,Gelasio,serif;
+  --mono:Consolas,"Liberation Mono","Courier New",monospace;
+}
+*{box-sizing:border-box}
+html{background:#8A949E}
+body{margin:0;font-family:var(--serif);font-size:12pt;color:var(--ink)}
+
+/* ---------- barra de vista previa (no es parte del documento) ---------- */
+.bar{position:sticky;top:0;z-index:50;background:#1F2A33;color:#DDE5EC;display:flex;gap:18px;align-items:center;
+  padding:8px 18px;font:12px/1.3 system-ui,"Segoe UI",sans-serif}
+.bar b{color:#fff;font-weight:600}
+.bar label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.bar select{font:inherit;background:#2E3B46;color:#fff;border:1px solid #4A5A68;border-radius:4px;padding:2px 4px}
+.bar .sp{flex:1}
+
+/* ---------- hojas ---------- */
+#pages{display:flex;flex-direction:column;align-items:center;gap:22px;padding:26px 0 60px}
+.page{position:relative;width:210mm;height:297mm;background:#fff;overflow:hidden;flex:none;
+  box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.page .content{position:absolute;left:30mm;top:25mm;width:150mm;height:247mm;display:flex;flex-direction:column;overflow:visible}
+.page .content>*{flex:none}
+body.guides .page::after{content:"";position:absolute;left:30mm;top:25mm;width:150mm;height:247mm;
+  border:1px dashed rgba(0,112,192,.55);pointer-events:none}
+.page .foot{position:absolute;left:30mm;right:30mm;bottom:12.5mm;display:flex;justify-content:space-between;
+  font-size:8pt;color:var(--muted);border-top:.5pt solid var(--line);padding-top:2mm;line-height:1.2}
+
+/* ---------- estilos de parrafo (equivalen a estilos de Word) ---------- */
+p{margin:0 0 8pt;line-height:1.7;text-align:justify}              /* Normal: Georgia 12, interlineado 1,5, justificado, 8 pt despues */
+p.note{font-size:10pt;color:var(--muted);line-height:1.6;margin-bottom:6pt}
+p.lbl{font-weight:bold;margin-bottom:4pt}
+p.center{text-align:center}
+a,.lnk{color:var(--link);text-decoration:underline}
+
+h1,h2,h3{margin:0;position:relative;line-height:1.7;text-align:left}
+h1{font-weight:normal;font-size:18pt;color:var(--h1);margin:18pt 0 4pt;padding-left:12.5mm}      /* Titulo 1: Georgia 18, 0070C0, 18 pt antes, 4 despues */
+h1 .num{position:absolute;left:-1.3mm}
+h2{font-family:var(--century);font-weight:bold;font-size:14pt;color:var(--ink);margin:8pt 0 4pt;padding-left:7.5mm} /* Titulo 2: Century 14 negrita */
+h2 .num{position:absolute;left:1.2mm}
+h3{font-weight:bold;font-size:12pt;color:var(--brand);margin:8pt 0 4pt}                              /* Titulo 3: Georgia 12 negrita 0F4761 (propuesta) */
+
+code,.mono{font-family:var(--mono);font-size:7.5pt;overflow-wrap:anywhere}
+p code,li code{font-size:10pt;background:var(--code);padding:0 2pt}
+
+/* ---------- nota destacada: parrafo con borde izquierdo y sombreado ---------- */
+.callout{border-left:3pt solid var(--h1);background:var(--soft);padding:4pt 8pt;margin:4pt 0 10pt}
+.callout p{margin:0;font-size:10pt;line-height:1.6;text-align:left}
+.callout p+p{margin-top:2pt}
+
+/* ---------- tablas ---------- */
+table{width:150mm;table-layout:fixed;border-collapse:collapse;margin:4pt 0 10pt;font-size:8pt;line-height:1.14}
+th{font-weight:bold;color:var(--brand);background:var(--soft);text-align:left;vertical-align:bottom;
+   padding:2.2mm 1.5mm 1.6mm;border-bottom:1.5pt solid var(--brand);border-top:.5pt solid var(--line)}
+td{padding:1.8mm 1.5mm;border-bottom:.5pt solid var(--line);vertical-align:top;text-align:left;overflow-wrap:anywhere}
+tbody tr:last-child td{border-bottom:1.5pt solid var(--brand)}
+/* Regla de tablas: texto y estados en Georgia 8 pt; todo identificador tecnico (nombres de recurso,
+   rutas, FQDN, tags, commits, tickets) en Consolas 7,5 pt. El color solo expresa el estado de la celda. */
+td code,td .fq{font-family:var(--mono);font-size:7.5pt;background:none;padding:0;color:inherit;overflow-wrap:anywhere}
+td .sub,td .inp,td .tkt,td .typ{display:block;font:inherit;color:inherit;letter-spacing:0;text-transform:none;margin:0}
+td.n{color:inherit;font-size:inherit}
+.uso,.sin,.noex,.pend,.acc,.na{color:inherit;font-weight:normal}
+td.sin,td.pend,td.acc{background:#FFF2CC}   /* amarillo: requiere atencion */
+td.noex,td.na{background:#EDEDED}           /* gris: no existe / no aplica en ese ambiente */
+.hl{background:#FFF2CC;padding:0 4pt}
+.hg{background:#EDEDED;padding:0 4pt}
+
+/* ---------- portada ---------- */
+.cover .banner{position:absolute;top:0;left:0;width:210mm;height:46mm;
+  background:linear-gradient(180deg,#CCF7F2 0%,#E3F8FD 38%,#F5FCFE 72%,#FFFFFF 100%)}
+.cover .banner::before{content:"";position:absolute;left:0;top:0;width:100%;height:1.2mm;
+  background:linear-gradient(90deg,#5DBB63 0%,#2FD3A8 25%,#00C8D7 45%,#00A8E8 62%,#0070C0 80%,#0F4761 100%);font-size:25pt;line-height:1.8;text-align:center;margin:0 0 8pt}
+.cover .content{padding-top:15.9mm}
+.cover .c25{font-family:var(--century);font-size:25pt;line-height:1.8;text-align:center;margin:0 0 8pt}
+.cover .org{font-family:var(--century);font-size:16pt;line-height:1.8;text-align:center;color:#595959;margin:0 0 8pt}
+.cover .t36{font-size:36pt;line-height:1.7;text-align:center;margin:0 0 8pt}
+.cover .fld{text-align:left;margin:0 0 8pt}
+.cover .fld b{font-weight:bold}
+.cover .sp12{height:20.4pt;margin-bottom:8pt}
+
+/* ---------- indice ---------- */
+.toc-t{font-size:18pt;line-height:1.7;color:var(--h1);margin:0 0 8pt}
+.te{display:flex;align-items:baseline;line-height:1.7;margin-bottom:5pt;font-size:12pt}
+.te .n{flex:none;width:8.5mm}
+.te .x{flex:none}
+.te .d{flex:1;border-bottom:1px dotted #666;margin:0 1mm;transform:translateY(-1.2mm)}
+.te .p{flex:none}
+.te.l2{padding-left:4.2mm}
+.te.l2 .n{width:7.5mm}
+.te a{color:inherit;text-decoration:none}
+a.int{color:var(--link);text-decoration:underline}
+
+#src,#measure{position:absolute;left:-10000px;top:0;width:150mm;visibility:hidden;display:flex;flex-direction:column}
+#src>*{flex:none}
+
+@page{size:A4;margin:0}
+@media print{
+  html,body{background:#fff}
+  .bar{display:none}
+  #pages{display:block;padding:0;zoom:1!important}
+  .page{box-shadow:none;margin:0;break-after:page}
+  body.guides .page::after{display:none}
+}
+
+/* ---------- espacio reservado para diagramas (se reemplaza por la imagen exportada de draw.io) ---------- */
+.diag{width:150mm;border:1pt dashed var(--line);background:var(--soft);padding:5mm 6mm;margin:4pt 0 10pt;
+  display:flex;flex-direction:column;justify-content:center;color:var(--muted)}
+.diag .dt{font-weight:bold;font-size:10pt;color:var(--brand);margin:0 0 3pt;text-align:center}
+.diag .ds{font-size:8pt;line-height:1.45;margin:0;text-align:left}
+.diag .ds code{font-size:7.5pt;background:none;padding:0}
+
+/* ---------- imagen de diagrama (Folium) ---------- */
+.fig{width:150mm;margin:4pt 0 10pt;display:flex;justify-content:center}
+.fig img{max-width:100%;max-height:100%;object-fit:contain;display:block}

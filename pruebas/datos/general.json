@@ -1,0 +1,235 @@
+{
+  "formato": 1,
+  "documento": "general",
+  "aplicacion": "demo",
+  "organizacion": "Organizacion de ejemplo",
+  "titulo_pagina": "Documento general de la aplicación",
+  "portada": [
+    {
+      "etiqueta": "Aplicación",
+      "valor": "demo"
+    },
+    {
+      "etiqueta": "Tracking code",
+      "valor": "DEMOAP"
+    },
+    {
+      "etiqueta": "Versión del documento",
+      "automatico": "version"
+    },
+    {
+      "etiqueta": "Última actualización",
+      "automatico": "fecha"
+    }
+  ],
+  "estados": [
+    {
+      "texto": "En uso",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Creado",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Aplicada",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Lectura",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Solo observabilidad",
+      "color": "ninguno"
+    },
+    {
+      "texto": "No existe",
+      "color": "gris"
+    },
+    {
+      "texto": "No aplica",
+      "color": "gris"
+    },
+    {
+      "texto": "No usa",
+      "color": "gris"
+    },
+    {
+      "texto": "Pendiente",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Pendiente de confirmar",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Pendiente de registrar",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Sin uso",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Sin acceso",
+      "color": "amarillo"
+    }
+  ],
+  "secciones": [
+    {
+      "id": "descripcion",
+      "titulo": "Descripción de la aplicación",
+      "bloques": [
+        {
+          "tipo": "parrafo",
+          "id": "b1",
+          "texto": "Aplicacion de ejemplo con **negrita**, `codigo` y un [enlace interno](#versiones)."
+        },
+        {
+          "tipo": "nota",
+          "id": "b2",
+          "texto": "Nota de ejemplo."
+        },
+        {
+          "tipo": "nota_destacada",
+          "id": "b3",
+          "texto": "Primer parrafo.\n\nSegundo parrafo."
+        }
+      ],
+      "secciones": []
+    },
+    {
+      "id": "versiones",
+      "titulo": "Documentos y versiones",
+      "bloques": [
+        {
+          "tipo": "etiqueta",
+          "id": "b1",
+          "texto": "Versiones vigentes"
+        },
+        {
+          "tipo": "tabla",
+          "id": "b2",
+          "clase": "estado",
+          "columnas": [
+            {
+              "id": "doc",
+              "titulo": "Documento",
+              "ancho_mm": 70,
+              "tipo": "texto"
+            },
+            {
+              "id": "ver",
+              "titulo": "Versión",
+              "ancho_mm": 80,
+              "tipo": "identificador"
+            }
+          ],
+          "filas": [
+            {
+              "id": "f1",
+              "celdas": {
+                "doc": "Repositorio",
+                "ver": {
+                  "texto": "0.1.0",
+                  "lineas": [
+                    "01/01/2026"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "secciones": [
+        {
+          "id": "tag-desplegado",
+          "titulo": "Tag desplegado",
+          "bloques": [
+            {
+              "tipo": "tabla",
+              "id": "b1",
+              "clase": "estado",
+              "columnas": [
+                {
+                  "id": "rec",
+                  "titulo": "Recurso",
+                  "ancho_mm": 60,
+                  "tipo": "identificador"
+                },
+                {
+                  "id": "dev",
+                  "titulo": "DEV",
+                  "ancho_mm": 30,
+                  "tipo": "estado"
+                },
+                {
+                  "id": "pre",
+                  "titulo": "PRE",
+                  "ancho_mm": 30,
+                  "tipo": "estado"
+                },
+                {
+                  "id": "pro",
+                  "titulo": "PRO",
+                  "ancho_mm": 30,
+                  "tipo": "estado"
+                }
+              ],
+              "filas": [
+                {
+                  "id": "f1",
+                  "celdas": {
+                    "rec": "demo-rol-lectura",
+                    "dev": "En uso",
+                    "pre": "En uso",
+                    "pro": "Pendiente"
+                  }
+                },
+                {
+                  "id": "f2",
+                  "celdas": {
+                    "rec": {
+                      "texto": "Rol de lectura de reportes",
+                      "estilo": "texto"
+                    },
+                    "dev": "No existe",
+                    "pre": "2 de 3 aplicadas",
+                    "pro": {
+                      "texto": "Pendiente de registrar",
+                      "color": "amarillo"
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "secciones": [
+            {
+              "id": "detalle",
+              "titulo": "Detalle",
+              "bloques": [
+                {
+                  "tipo": "imagen",
+                  "id": "b1",
+                  "alto_mm": 60,
+                  "descripcion": [
+                    "[Diagrama de ejemplo]",
+                    "Linea de detalle."
+                  ],
+                  "fuente_drawio": "03_Diagramas/demo.drawio"
+                }
+              ],
+              "secciones": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "versiones_vigentes": {
+    "repositorio": "0.1.0",
+    "compartidos": "20260101-v01"
+  }
+}

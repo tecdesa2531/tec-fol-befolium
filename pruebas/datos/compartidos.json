@@ -1,0 +1,136 @@
+{
+  "formato": 1,
+  "documento": "compartidos",
+  "aplicacion": "demo",
+  "organizacion": "Organizacion de ejemplo",
+  "titulo_pagina": "Repositorios compartidos y cambios manuales",
+  "portada": [
+    {
+      "etiqueta": "Aplicación",
+      "valor": "demo"
+    },
+    {
+      "etiqueta": "Tracking code",
+      "valor": "DEMOAP"
+    },
+    {
+      "etiqueta": "Versión del documento",
+      "automatico": "version"
+    },
+    {
+      "etiqueta": "Última actualización",
+      "automatico": "fecha"
+    }
+  ],
+  "estados": [
+    {
+      "texto": "En uso",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Creado",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Aplicada",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Lectura",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Solo observabilidad",
+      "color": "ninguno"
+    },
+    {
+      "texto": "No existe",
+      "color": "gris"
+    },
+    {
+      "texto": "No aplica",
+      "color": "gris"
+    },
+    {
+      "texto": "No usa",
+      "color": "gris"
+    },
+    {
+      "texto": "Pendiente",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Pendiente de confirmar",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Pendiente de registrar",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Sin uso",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Sin acceso",
+      "color": "amarillo"
+    }
+  ],
+  "secciones": [
+    {
+      "id": "cuenta-eks",
+      "titulo": "Cuenta de ejemplo",
+      "opcional": false,
+      "bloques": [
+        {
+          "tipo": "parrafo",
+          "id": "b1",
+          "texto": "Texto de ejemplo."
+        }
+      ],
+      "secciones": []
+    },
+    {
+      "id": "cuenta-data",
+      "titulo": "Cuenta Data",
+      "opcional": true,
+      "bloques": [
+        {
+          "tipo": "nota",
+          "id": "b1",
+          "texto": "No aplica en esta aplicacion."
+        }
+      ],
+      "secciones": []
+    },
+    {
+      "id": "anexo-a",
+      "titulo": "Anexo A. Reglas",
+      "anexo": true,
+      "bloques": [
+        {
+          "tipo": "tabla",
+          "id": "b1",
+          "clase": "estado",
+          "columnas": [
+            {
+              "id": "regla",
+              "titulo": "Regla",
+              "ancho_mm": 150,
+              "tipo": "texto"
+            }
+          ],
+          "filas": [
+            {
+              "id": "f1",
+              "celdas": {
+                "regla": "Permitir trafico interno [pendiente]()"
+              }
+            }
+          ]
+        }
+      ],
+      "secciones": []
+    }
+  ]
+}
