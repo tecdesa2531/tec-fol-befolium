@@ -1,0 +1,10 @@
+/* Ajustes de impresion de Folium sobre el CSS comun de la referencia.
+   1) Degradados opacos: con transparencia, Edge los pasa al PDF como franjas.
+      Los colores son los mismos de la referencia mezclados sobre blanco.
+   2) La franja de portada es 1 mm mas ancha que la hoja (la hoja recorta):
+      evita el hueco del lado derecho por redondeo de la pagina.
+   3) Forzar el color de fondo al imprimir. */
+html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.cover .banner{
+  width:211mm;
+  background:linear-gradient(180deg,#CCF7F2 0%,#E3F8FD 38%,#F5FCFE 72%,#FFFFFF 100%)}

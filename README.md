@@ -30,8 +30,8 @@ python servidor.py
 | Variable | Para qué sirve | Por defecto | Estado |
 |---|---|---|---|
 | `FOLIUM_PUERTO` | Puerto del servidor local | `8765` | En uso (Fase 0) |
-| `DOC_RAIZ_TRABAJO` | Directorio de trabajo que ve el equipo en SharePoint. Folium crea ahí `02_Documentacion/`, `03_Diagramas/` y `04_OperacionesManuales/`. No toca `01_Arquitectura/` | sin valor | Se usará desde la Fase 1 |
-| `DOC_RAIZ_PROCESO` | Directorio de proceso, privado. Contiene `<TRACKING>/actual/` y `<TRACKING>/versiones/` | sin valor | Se usará desde la Fase 1 |
+| `DOC_RAIZ_TRABAJO` | Ruta completa del directorio de trabajo que ve el equipo en SharePoint. Folium crea ahí `02_Documentacion/`, `03_Diagramas/` y `04_OperacionesManuales/`. No toca `01_Arquitectura/` | `temp_pruebas/trabajo` | Se usará desde la Fase 1 |
+| `DOC_RAIZ_PROCESO` | Ruta completa del directorio de proceso, privado. Contiene `<TRACKING>/actual/` y `<TRACKING>/versiones/` | `temp_pruebas/proceso` | Se usará desde la Fase 1 |
 
 Para fijarlas en la sesión de PowerShell (las rutas son solo un ejemplo):
 
@@ -39,6 +39,8 @@ Para fijarlas en la sesión de PowerShell (las rutas son solo un ejemplo):
 $env:DOC_RAIZ_TRABAJO = "C:\ruta\al\directorio\de\trabajo"
 $env:DOC_RAIZ_PROCESO = "C:\ruta\al\directorio\de\proceso"
 ```
+
+Si una variable no existe, Folium crea y usa la carpeta por defecto dentro del repositorio (`temp_pruebas/`, que está en `.gitignore`). Al arrancar, el servidor imprime qué directorios usa.
 
 Nunca guardes contraseñas ni valores de secretos en estas variables ni en los documentos; solo dónde están.
 
