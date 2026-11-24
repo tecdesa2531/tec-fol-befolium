@@ -1,4 +1,4 @@
-/* Interfaz de Folium (Fase 1). JavaScript nativo, sin librerias. */
+/* Interfaz de Folium: aplicacion, pestanas y versiones. JavaScript nativo, sin librerias. */
 (function () {
   const DOCS = ["general", "repositorio", "compartidos"];
   const NOMBRES = { general: "General", repositorio: "Repositorio", compartidos: "Compartidos" };
@@ -6,21 +6,8 @@
   let estado = null;
   let activo = "general";
 
-  function el(tag, props, hijos) {
-    const e = document.createElement(tag);
-    Object.entries(props || {}).forEach(([k, v]) => { if (k === "texto") e.textContent = v; else e.setAttribute(k, v); });
-    (hijos || []).forEach((h) => e.appendChild(typeof h === "string" ? document.createTextNode(h) : h));
-    return e;
-  }
-
-  async function api(ruta, cuerpo) {
-    const opciones = cuerpo === undefined ? {} :
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) };
-    const r = await fetch(ruta, opciones);
-    const datos = await r.json();
-    if (!r.ok) throw new Error(datos.error || "Error inesperado");
-    return datos;
-  }
+  const F = window.Folium;
+  const el = F.el, api = F.api;
 
   /* ---------- estado y pantallas ---------- */
   async function cargarEstado() {
@@ -36,6 +23,7 @@
     $("acciones").hidden = !abierta;
     $("app-info").hidden = !abierta;
     if (!abierta) {
+      F.Editor.reiniciar();
       if (!$("abrir-carpeta").value) $("abrir-carpeta").value = estado.carpeta_defecto;
       return;
     }
@@ -63,14 +51,14 @@
     });
   }
 
-  function mostrarDocumento() {
+  async function mostrarDocumento() {
     const info = estado.documentos[activo];
-    const hoja = $("hoja"), msg = $("mensaje"), aviso = $("aviso");
-    aviso.hidden = true;
+    const hoja = $("hoja"), msg = $("mensaje");
     msg.textContent = "";
-    hoja.hidden = true;
     msg.hidden = true;
+    hoja.hidden = true;
     $("vista").hidden = true;
+    $("aviso").hidden = true;
     $("btn-imprimir").disabled = true;
 
     if (info.error_lectura) {
@@ -81,24 +69,49 @@
       return;
     }
     if (!info.existe) { formularioCrear(msg); return; }
-    if (info.errores.length) {
+    hoja.hidden = false;                 // la hoja debe estar visible para poder medirla
+    $("vista").hidden = false;
+    const pedido = activo;
+    try {
+      await F.Editor.activar(activo);
+    } catch (e) {
+      if (pedido !== activo) return;
+      hoja.hidden = true;
+      $("vista").hidden = true;
       msg.hidden = false;
-      msg.appendChild(el("h2", { texto: "Errores de validación en " + NOMBRES[activo] }));
+      msg.appendChild(el("h2", { texto: "No se puede mostrar " + NOMBRES[activo] }));
+      msg.appendChild(el("p", { texto: e.message }));
       msg.appendChild(el("p", { texto: "Corrige el archivo de actual/ y pulsa Recargar." }));
-      msg.appendChild(listaProblemas(info.errores));
       return;
     }
-    if (info.advertencias.length) {
-      aviso.hidden = false;
-      aviso.textContent = "";
-      aviso.appendChild(document.createTextNode("Advertencias (no impiden guardar):"));
-      aviso.appendChild(listaProblemas(info.advertencias));
-    }
-    hoja.hidden = false;
-    $("vista").hidden = false;
-    hoja.src = "/hoja/" + activo + "?t=" + Date.now();
     $("btn-imprimir").disabled = false;
+    pintarAviso();
   }
+
+  /* Errores y advertencias del documento activo, sobre la hoja. */
+  function pintarAviso() {
+    const info = estado.documentos[activo];
+    const aviso = $("aviso");
+    aviso.textContent = "";
+    const problemas = info.errores.length ? info.errores : info.advertencias;
+    aviso.hidden = problemas.length === 0;
+    if (!problemas.length) return;
+    aviso.classList.toggle("con-errores", info.errores.length > 0);
+    aviso.appendChild(document.createTextNode(info.errores.length
+      ? "Errores de validación (hay que corregirlos para guardar una versión):"
+      : "Advertencias (no impiden guardar):"));
+    aviso.appendChild(listaProblemas(problemas));
+  }
+
+  /* El editor avisa cuando el servidor guardo el borrador: se actualizan errores y cambios. */
+  F.alGuardar = function (nombre, respuesta) {
+    const info = estado.documentos[nombre];
+    info.errores = respuesta.problemas.filter((p) => p.nivel === "error");
+    info.advertencias = respuesta.problemas.filter((p) => p.nivel === "advertencia");
+    if (typeof respuesta.cambio === "boolean") info.cambio = respuesta.cambio;
+    pintarPestanas();
+    if (nombre === activo) pintarAviso();
+  };
 
   function listaProblemas(problemas) {
     const ul = el("ul");
@@ -183,10 +196,9 @@
   /* ---------- controles de vista (zoom y margenes) sobre el iframe ---------- */
   function aplicarVista() {
     const w = $("hoja").contentWindow;
-    if (!w || !w.__done) { setTimeout(aplicarVista, 150); return; }
-    const d = w.document;
-    d.getElementById("pages").style.zoom = $("vista-zoom").value;
-    d.body.classList.toggle("guides", $("vista-margenes").checked);
+    if (!w || !w.document.getElementById("pages")) return;
+    w.document.getElementById("pages").style.zoom = $("vista-zoom").value;
+    w.document.body.classList.toggle("guides", $("vista-margenes").checked);
   }
   $("hoja").addEventListener("load", aplicarVista);
   $("vista-zoom").addEventListener("change", aplicarVista);
@@ -203,12 +215,18 @@
 
   $("btn-cambiar").addEventListener("click", async () => {
     menu(false);
+    await F.Editor.guardarYa();
     estado = await api("/api/cerrar", {});
     $("abrir-tracking").value = "";
     $("abrir-carpeta").value = estado.carpeta_defecto;
     pintar();
   });
-  $("btn-recargar").addEventListener("click", () => { menu(false); cargarEstado(); });
+  $("btn-recargar").addEventListener("click", async () => {
+    menu(false);
+    await F.Editor.guardarYa();
+    F.Editor.reiniciar();            // vuelve a leer los JSON de actual/ (se pierde el historial)
+    await cargarEstado();
+  });
   $("btn-imprimir").addEventListener("click", () => { menu(false); const h = $("hoja"); if (!h.hidden) h.contentWindow.print(); });
   document.querySelectorAll("#pestanas button").forEach((b) =>
     b.addEventListener("click", () => { activo = b.dataset.doc; pintarPestanas(); mostrarDocumento(); }));
@@ -224,6 +242,7 @@
     $("guardar-confirmar").disabled = false;
     dlg.showModal();
     try {
+      await F.Editor.guardarYa();
       propuesta = await api("/api/guardar/propuesta");
       pintarPropuesta();
     } catch (e) { mostrarErrorGuardar(e.message); $("guardar-confirmar").disabled = true; }
@@ -280,6 +299,8 @@
     try {
       const r = await api("/api/guardar", pedidas);
       mostrarResultado(r);
+      const g = F.Editor.modelos.general;      // el servidor escribio las versiones vigentes en general.json
+      if (g) g.doc.versiones_vigentes = (await api("/api/documento/general")).versiones_vigentes;
       await cargarEstado();
     } catch (e) { mostrarErrorGuardar(e.message); }
   });
@@ -302,6 +323,12 @@
     if (r.copiados.length) c.appendChild(el("p", { texto: "PDF copiados de la versión anterior: " + r.copiados.join(", ") }));
     r.avisos.forEach((a) => c.appendChild(el("div", { class: "nota", texto: a })));
   }
+
+  /* ---------- editor: botones de los paneles ---------- */
+  $("btn-nueva-seccion").addEventListener("click", () => F.Editor.agregarSeccion());
+  $("btn-deshacer").addEventListener("click", () => F.Editor.deshacer());
+  $("btn-rehacer").addEventListener("click", () => F.Editor.rehacer());
+  F.Arbol.instalar();
 
   cargarEstado();
 })();

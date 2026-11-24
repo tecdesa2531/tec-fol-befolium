@@ -18,6 +18,7 @@ Un archivo por documento en `DOC_RAIZ_PROCESO/<TRACKING>/actual/`: `general.json
   ],
   "versiones_vigentes": {"repositorio": "0.1.0", "compartidos": "20260101-v01"},
   "estados": [ ...ver sección 5... ],
+  "ids_retirados": [],
   "secciones": [ ...árbol de secciones... ]
 }
 ```
@@ -26,6 +27,7 @@ Un archivo por documento en `DOC_RAIZ_PROCESO/<TRACKING>/actual/`: `general.json
 - `organizacion`, `titulo_pagina` y `portada` salen de aquí, y el pie es `aplicacion · titulo_pagina · versión`. El paginador es uno solo y no lleva ningún dato fijo.
 - La portada es una lista ordenada: se pueden agregar o quitar campos. Un campo lleva `valor` (texto fijo) o `automatico`: `version` o `fecha`, que Folium rellena al guardar. Mientras se edita, la versión es "Borrador".
 - `versiones_vigentes` solo existe en `general`: las versiones vigentes del documento 2 y del 3.
+- `ids_retirados` (opcional): identificadores de secciones quitadas. Folium lo llena al quitar una sección y la validación rechaza reutilizarlos.
 
 ## 2. Secciones (agregar y quitar libremente)
 
@@ -93,6 +95,7 @@ Imagen:
 ```
 
 - `clase`: `estado` (solo lo vigente) o `registro` (acumula filas).
+- `nuevas_filas` (solo en `registro`): `arriba` (la más reciente primero, como los scripts y cargas) o `abajo` (al final, como las entregas y los secretos). Borrar una fila de una tabla de registro pide confirmación. *(Se implementa en el paso 3 de la Fase 2.)*
 - Los anchos suman **150 mm**; si no, Folium avisa y no deja guardar la versión.
 - Tipo de columna = estilo por defecto de sus celdas:
   - `texto`: Georgia 8 pt.

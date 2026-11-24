@@ -46,8 +46,11 @@
 </main>
 
 <div id="cuerpo" hidden>
-  <aside id="panel-izq" hidden aria-label="Estructura y bloques">
-    <h2>Estructura</h2>
+  <aside id="panel-izq" aria-label="Estructura y bloques">
+    <div class="cabecera"><h2>Estructura</h2><button type="button" id="btn-nueva-seccion">+ Sección</button></div>
+    <div id="arbol"></div>
+    <h2 class="separada">Bloques</h2>
+    <div id="paleta"></div>
   </aside>
   <section id="centro">
 
@@ -61,10 +64,25 @@
       <label><input type="checkbox" id="vista-margenes"> Ver márgenes (3 cm / 2,5 cm)</label>
     </div>
   </section>
-  <aside id="panel-der" hidden aria-label="Propiedades">
-    <h2>Propiedades</h2>
+  <aside id="panel-der" aria-label="Propiedades">
+    <div class="cabecera"><h2>Propiedades</h2>
+      <span class="fila-botones"><button type="button" id="btn-deshacer" title="Deshacer (Ctrl+Z)">Deshacer</button><button type="button" id="btn-rehacer" title="Rehacer (Ctrl+Y)">Rehacer</button></span>
+    </div>
+    <div id="props"></div>
+    <p id="guardado" class="ayuda">Guardado ✓</p>
   </aside>
 </div>
+
+<dialog id="dlg-confirmar">
+  <h2 id="confirmar-titulo"></h2>
+  <div id="confirmar-cuerpo"></div>
+  <div class="botones">
+    <button type="button" id="confirmar-no">Cancelar</button>
+    <button type="button" id="confirmar-si" class="primario">Aceptar</button>
+  </div>
+</dialog>
+
+<div id="aviso-flotante" role="status" hidden></div>
 
 <dialog id="dlg-abrir">
   <h2>Confirmar apertura</h2>
@@ -85,6 +103,12 @@
   </div>
 </dialog>
 
+<script src="/comun.js"></script>
+<script src="/modelo.js"></script>
+<script src="/hoja.js"></script>
+<script src="/arbol.js"></script>
+<script src="/propiedades.js"></script>
+<script src="/editor.js"></script>
 <script src="/folium.js"></script>
 </body>
 </html>

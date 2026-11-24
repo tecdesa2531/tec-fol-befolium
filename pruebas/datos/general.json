@@ -6,6 +6,10 @@
   "titulo_pagina": "Documento general de la aplicación",
   "portada": [
     {
+      "etiqueta": "Proyecto",
+      "valor": "Proyecto de ejemplo"
+    },
+    {
       "etiqueta": "Aplicación",
       "valor": "demo"
     },
@@ -18,8 +22,16 @@
       "automatico": "version"
     },
     {
-      "etiqueta": "Última actualización",
-      "automatico": "fecha"
+      "etiqueta": "Líder técnico",
+      "valor": "Persona Uno"
+    },
+    {
+      "etiqueta": "Responsable de infraestructura",
+      "valor": "Persona Dos"
+    },
+    {
+      "etiqueta": "Clasificación",
+      "valor": "USO INTERNO"
     }
   ],
   "estados": [

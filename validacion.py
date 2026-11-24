@@ -91,6 +91,7 @@ def validar(doc):
         if e.get("color") not in COLORES:
             error("estados", "Color no permitido en '%s'" % e.get("texto"))
 
+    retirados = set(doc.get("ids_retirados", []))
     ids = {}
     enlaces = []
     textos = []
@@ -103,6 +104,8 @@ def validar(doc):
                 error(donde, "Identificador vacío o con caracteres no permitidos")
             elif sid in ids:
                 error(donde, "Identificador repetido")
+            elif sid in retirados:
+                error(donde, "Identificador de una sección que se quitó: no se reutiliza")
             ids[sid] = True
             if not s.get("titulo"):
                 error(donde, "Falta el título")

@@ -19,16 +19,13 @@ import visor
 
 RAIZ = Path(__file__).resolve().parent
 PUERTO = int(os.environ.get("FOLIUM_PUERTO", "8765"))
-LIMITE_CUERPO = 1024 * 1024
+LIMITE_CUERPO = 8 * 1024 * 1024
 
 # Solo se sirven estos archivos; nada mas de disco.
-ESTATICOS = {
-    "/": ("web/folium.html", "text/html; charset=utf-8"),
-    "/folium.js": ("web/folium.js", "text/javascript; charset=utf-8"),
-    "/folium.svg": ("web/folium.svg", "image/svg+xml"),
-    "/folium.css": ("web/folium.css", "text/css; charset=utf-8"),
-    "/ajustes_impresion.css": ("web/ajustes_impresion.css", "text/css; charset=utf-8"),
-}
+ESTATICOS = {"/": ("web/folium.html", "text/html; charset=utf-8")}
+TIPOS_WEB = {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
+             ".svg": "image/svg+xml"}
+RE_ESTATICO = re.compile(r"/([a-z_]+)(\.js|\.css|\.svg)")
 REFERENCIAS = {
     "/referencia/general": "plantilla_documento_1_general.html",
     "/referencia/repositorio": "plantilla_documento_2_repositorio.html",
@@ -76,9 +73,12 @@ class Manejador(BaseHTTPRequestHandler):
     def do_GET(self):
         url = urlparse(self.path)
         ruta = url.path
+        estatico = RE_ESTATICO.fullmatch(ruta)
         if ruta in ESTATICOS:
             archivo, tipo = ESTATICOS[ruta]
             self.servir_archivo(RAIZ / archivo, tipo)
+        elif estatico and (RAIZ / "web" / ruta[1:]).is_file() and ruta not in ("/estilos.css", "/paginador.js"):
+            self.servir_archivo(RAIZ / "web" / ruta[1:], TIPOS_WEB[estatico.group(2)])
         elif ruta in REFERENCIAS:
             self.servir_referencia(REFERENCIAS[ruta])
         elif ruta == "/api/estado":
@@ -90,8 +90,10 @@ class Manejador(BaseHTTPRequestHandler):
             self.json(200, {"carpeta": carpeta})
         elif ruta == "/api/guardar/propuesta":
             self.con_aplicacion(lambda app: self.json(200, versiones.propuesta(app)))
-        elif re.fullmatch(r"/hoja/(general|repositorio|compartidos)", ruta):
-            self.con_aplicacion(lambda app: self.servir_hoja(app, ruta.split("/")[2]))
+        elif ruta == "/hoja":
+            self.responder(200, visor.generar_marco().encode("utf-8"), "text/html; charset=utf-8")
+        elif re.fullmatch(r"/api/documento/(general|repositorio|compartidos)", ruta):
+            self.con_aplicacion(lambda app: self.leer_documento(app, ruta.split("/")[3]))
         elif re.fullmatch(r"/imprimir/(general|repositorio|compartidos)/[0-9.\-v]+", ruta):
             _, _, doc, version = ruta.split("/")
             self.con_aplicacion(lambda app: self.servir_impresion(app, doc, version))
@@ -117,6 +119,10 @@ class Manejador(BaseHTTPRequestHandler):
                 self.json(200, estado_general())
             elif ruta == "/api/crear":
                 self.con_aplicacion(lambda app: self.crear(app, datos))
+            elif re.fullmatch(r"/api/documento/(general|repositorio|compartidos)", ruta):
+                self.con_aplicacion(lambda app: self.guardar_borrador(app, ruta.split("/")[3], datos))
+            elif re.fullmatch(r"/api/render/(general|repositorio|compartidos)", ruta):
+                self.con_aplicacion(lambda app: self.renderizar(app, ruta.split("/")[3], datos))
             elif ruta == "/api/guardar":
                 self.con_aplicacion(lambda app: self.json(200, versiones.guardar_version(app, datos)))
             else:
@@ -147,19 +153,34 @@ class Manejador(BaseHTTPRequestHandler):
         except ValueError as e:
             self.json(400, {"error": str(e)})
 
-    def servir_hoja(self, app, doc):
-        """Borrador A4 de un documento, desde actual/."""
-        actual = documentos.cargar_documento(app.actual / (doc + ".json"))
-        if actual is None:
-            self.texto(404, "Todavía no existe %s.json" % doc)
-            return
-        if any(p["nivel"] == "error" for p in validacion.validar(actual)):
-            self.texto(422, "El documento tiene errores de validación.")
-            return
+    def leer_documento(self, app, doc):
+        """JSON de actual/ tal cual, para que el editor lo cargue."""
+        datos = documentos.cargar_documento(app.actual / (doc + ".json"))
+        if datos is None:
+            self.json(404, {"error": "Todavía no existe %s.json" % doc})
+        else:
+            self.json(200, datos)
+
+    def guardar_borrador(self, app, doc, datos):
+        """Autoguardado: escribe el documento en actual/ aunque tenga errores de validacion."""
+        if not isinstance(datos, dict) or datos.get("documento") != doc or datos.get("formato") != 1:
+            raise ValueError("El documento recibido no es válido.")
+        documentos.guardar_documento(app.actual / (doc + ".json"), datos)
+        problemas = validacion.validar(datos)
+        respuesta = {"problemas": problemas}
+        if not validacion.hay_errores(problemas):
+            respuesta["cambio"] = versiones.cambio_propio(app, doc, datos)
+        self.json(200, respuesta)
+
+    def renderizar(self, app, doc, datos):
+        """Contenido paginable de un documento, sin guardarlo."""
         vigentes = {d: versiones.ultima(app, d) for d in ("repositorio", "compartidos")}
-        pagina = visor.generar_html(actual, carpeta_actual=app.actual, vista=True,
-                                    tokens=versiones.tokens_de(app, vigentes))
-        self.responder(200, pagina.encode("utf-8"), "text/html; charset=utf-8")
+        try:
+            res = visor.fragmento(datos, carpeta_actual=app.actual, editable=True,
+                                  tokens=versiones.tokens_de(app, vigentes))
+        except (KeyError, TypeError, ValueError, AttributeError) as e:
+            raise ValueError("El documento no se puede mostrar (%s)." % e)
+        self.json(200, res)
 
     def servir_impresion(self, app, doc, version):
         """Version guardada, con el titulo igual al nombre del PDF, que abre la impresion."""

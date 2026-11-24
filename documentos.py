@@ -1,5 +1,6 @@
 """Cargador de los tres documentos de una aplicacion (JSON en actual/)."""
 import json
+import os
 import re
 from pathlib import Path
 
@@ -37,4 +38,7 @@ def cargar_aplicacion(raiz_proceso, tracking):
 def guardar_documento(ruta, doc):
     """Escribe el JSON con formato legible (se puede corregir a mano)."""
     texto = json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
-    Path(ruta).write_text(texto, encoding="utf-8", newline="\n")
+    ruta = Path(ruta)
+    temporal = ruta.with_name(ruta.name + ".tmp")
+    temporal.write_text(texto, encoding="utf-8", newline="\n")
+    os.replace(temporal, ruta)         # reemplazo atomico: nunca queda un archivo a medias

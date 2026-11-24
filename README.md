@@ -65,7 +65,7 @@ Contiene los HTML de referencia y los acuerdos. No se sube a git. Para probar la
 4. Las pestañas General, Repositorio y Compartidos muestran las hojas A4. Si un documento tiene errores de validación, se listan en su pestaña.
 5. "Guardar versión" crea el HTML inmutable de cada documento que cambió, la carpeta `02_Documentacion/<versión del documento 1>/` y copia el último PDF de los que no cambiaron. Después, un botón por documento abre la impresión con el título igual al nombre del PDF. Elige "Guardar como PDF" (no "Microsoft Print to PDF") y activa "Gráficos de fondo".
 
-En la Fase 1 los datos de `actual/` se corrigen a mano en los JSON y se pulsa "Recargar". La edición dentro de Folium llega en la Fase 2.
+Los cambios se guardan solos en `actual/` y se pueden deshacer con `Ctrl+Z` y rehacer con `Ctrl+Y`. Los JSON también se pueden corregir a mano y se pulsa "Recargar".
 
 Para probar con datos inventados: `python herramientas/sembrar_prueba.py`, y abre la aplicación `DEMOAP`.
 
@@ -74,6 +74,12 @@ Para probar con datos inventados: `python herramientas/sembrar_prueba.py`, y abr
 ```powershell
 python pruebas/probar.py
 python pruebas/probar_aplicacion.py
+```
+
+Opcional, solo si tienes Node (no hace falta para usar Folium):
+
+```powershell
+node pruebas/probar_modelo.js
 ```
 
 ## Estructura

@@ -6,6 +6,10 @@
   "titulo_pagina": "Repositorio de la aplicación",
   "portada": [
     {
+      "etiqueta": "Proyecto",
+      "valor": "Proyecto de ejemplo"
+    },
+    {
       "etiqueta": "Aplicación",
       "valor": "demo"
     },
@@ -14,12 +18,24 @@
       "valor": "DEMOAP"
     },
     {
+      "etiqueta": "Repositorio",
+      "valor": "demo-recursos"
+    },
+    {
       "etiqueta": "Versión del documento",
       "automatico": "version"
     },
     {
+      "etiqueta": "Responsable",
+      "valor": "Persona Dos"
+    },
+    {
       "etiqueta": "Última actualización",
       "automatico": "fecha"
+    },
+    {
+      "etiqueta": "Clasificación",
+      "valor": "USO INTERNO"
     }
   ],
   "estados": [

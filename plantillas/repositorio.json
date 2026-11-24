@@ -32,6 +32,10 @@
     {
       "etiqueta": "Última actualización",
       "automatico": "fecha"
+    },
+    {
+      "etiqueta": "Clasificación",
+      "valor": "{clasificacion}"
     }
   ],
   "estados": [

@@ -31,3 +31,14 @@ Cada decisión nueva, con su motivo en una o dos líneas.
 - **Servidor solo local.** Escucha en `127.0.0.1` (`crear_servidor`), con una prueba que lo comprueba.
 - **Imágenes por contenido.** Al guardar una versión se escribe `<nombre>.imagenes.json` con el SHA-256 de cada imagen usada; un cambio de contenido con el mismo nombre cuenta como cambio del documento. El nombre de archivo de una imagen no admite rutas.
 - **Tabla sin filas.** Muestra "Sin registros" en una sola celda. Las plantillas de documentos nuevos usan tablas sin filas.
+
+## Fase 2 (editor)
+- **Autoguardado y deshacer.** Cada cambio actualiza el modelo en pantalla, se pinta al instante y se guarda solo en `actual/` (con 400 ms de retraso, en orden y con reemplazo atómico). El historial de deshacer y rehacer (`Ctrl+Z`, `Ctrl+Y`) es por documento y vive mientras la aplicación está abierta; "Recargar" lo reinicia. El borrador se guarda aunque tenga errores de validación; las versiones sí exigen validar.
+- **Un solo renderizador.** El HTML de las hojas lo genera siempre Python (`visor.fragmento`). El editor manda el documento a `/api/render/<doc>`, recibe el contenido y vuelve a paginar en el mismo `iframe` con `FoliumPaginar()`, sin recargarlo. El paginador sigue siendo uno solo y el HTML guardado se abre y pagina igual que antes (se volvió a verificar contra la referencia: 7, 8 y 17 hojas).
+- **Referencias en la hoja.** Solo en el editor, cada elemento lleva `data-ref` (`s:<sección>`, `b:<sección>:<bloque>`, `f:` fila, `c:` celda, `h:` encabezado). Los HTML guardados no los llevan.
+- **Identificador de una sección nueva.** Nace provisional (`nueva-seccion`) y se fija al confirmar su primer título; después no cambia. Los de secciones quitadas van a `ids_retirados` y no se reutilizan. Una sección provisional que se quita no queda retirada.
+- **Soltar en la hoja.** El elemento nuevo entra antes del primer título que queda debajo del cursor, con su nivel; si no hay ninguno, al final. En la estructura, la zona de la fila decide: arriba (antes), abajo (después) o en medio (como hija). Se respetan los 3 niveles y no se puede mover una sección dentro de sí misma.
+- **Confirmar al quitar.** Una sección con contenido pide confirmación e indica cuántos bloques y subsecciones se borran; una vacía se quita sin preguntar. Todo se puede deshacer.
+- **Tablas de registro.** Propiedad `nuevas_filas` (`arriba` o `abajo`) y confirmación al borrar una fila; se implementan en el paso 3.
+- **Portadas.** Las plantillas y los datos de prueba siguen a la referencia: el documento 1 lleva Proyecto, Aplicación, Tracking code, Versión, Líder técnico, Responsable de infraestructura y Clasificación; el 2 agrega Repositorio y Última actualización (solo ahí); el 3 lleva Responsable y Clasificación. Hay pruebas que lo verifican.
+- **Pruebas del modelo en Node (opcional).** `pruebas/probar_modelo.js` prueba la lógica del árbol; solo es para desarrollo, el proyecto no necesita Node.

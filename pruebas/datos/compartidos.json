@@ -6,6 +6,10 @@
   "titulo_pagina": "Repositorios compartidos y cambios manuales",
   "portada": [
     {
+      "etiqueta": "Proyecto",
+      "valor": "Proyecto de ejemplo"
+    },
+    {
       "etiqueta": "Aplicación",
       "valor": "demo"
     },
@@ -18,8 +22,12 @@
       "automatico": "version"
     },
     {
-      "etiqueta": "Última actualización",
-      "automatico": "fecha"
+      "etiqueta": "Responsable",
+      "valor": "Persona Dos"
+    },
+    {
+      "etiqueta": "Clasificación",
+      "valor": "USO INTERNO"
     }
   ],
   "estados": [

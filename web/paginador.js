@@ -1,7 +1,15 @@
-(async function(){
+/* Paginador unico. FoliumPaginar(fuente, config) vuelve a paginar sin recargar la pagina:
+   fuente es el HTML del contenido (opcional: si falta, usa el que ya esta en #src). */
+(function(){
+async function paginar(fuenteHtml, config){
+  if(config) window.FOLIUM=config;
   const CFG=window.FOLIUM;
+  window.__done=null;
   try{ await document.fonts.ready; }catch(e){}
   const MM = 96/25.4, CH = 247*MM, DOC=CFG.pie;
+  const srcEl=document.getElementById('src');
+  if(fuenteHtml!==undefined) srcEl.innerHTML=fuenteHtml;
+  document.getElementById('pages').textContent='';
   const src = [...document.querySelectorAll('#src > *')];
   const meas = document.getElementById('measure');
 
@@ -155,10 +163,16 @@
     });
   });
 
-  /* controles */
-  document.getElementById('g').addEventListener('change',e=>document.body.classList.toggle('guides',e.target.checked));
-  document.getElementById('z').addEventListener('change',e=>{root.style.zoom=e.target.value;});
-  document.getElementById('src').remove(); meas.remove();
-  /* ids duplicados por la medicion: se conservan solo los de las hojas */
+  /* ids duplicados por la medicion: se vacian el contenido fuente y la zona de medicion */
+  srcEl.textContent=''; meas.textContent='';
   window.__done={pages:total};
+}
+
+/* controles (una sola vez) */
+const g=document.getElementById('g'), z=document.getElementById('z');
+if(g) g.addEventListener('change',e=>document.body.classList.toggle('guides',e.target.checked));
+if(z) z.addEventListener('change',e=>{document.getElementById('pages').style.zoom=e.target.value;});
+
+window.FoliumPaginar=paginar;
+if(window.FOLIUM) paginar();
 })();

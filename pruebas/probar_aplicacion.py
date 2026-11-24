@@ -73,6 +73,35 @@ class PruebasAbrir(Base):
             aplicacion.abrir("DEMOAP", self.carpeta / "no_existe", self.proceso)
 
 
+ETIQUETAS_PORTADA = {
+    "general": ["Proyecto", "Aplicación", "Tracking code", "Versión del documento", "Líder técnico",
+                "Responsable de infraestructura", "Clasificación"],
+    "repositorio": ["Proyecto", "Aplicación", "Tracking code", "Repositorio", "Versión del documento",
+                    "Responsable", "Última actualización", "Clasificación"],
+    "compartidos": ["Proyecto", "Aplicación", "Tracking code", "Versión del documento", "Responsable",
+                    "Clasificación"],
+}
+
+
+class PruebasPortada(Base):
+    """La portada de las plantillas y de los datos de prueba sigue a los HTML de referencia."""
+
+    def test_plantillas(self):
+        self.crear_todo()
+        for doc, etiquetas in ETIQUETAS_PORTADA.items():
+            self.assertEqual([c["etiqueta"] for c in self.leer(doc)["portada"]], etiquetas, doc)
+
+    def test_datos_de_prueba(self):
+        for doc, etiquetas in ETIQUETAS_PORTADA.items():
+            datos = documentos.cargar_documento(RAIZ / "pruebas" / "datos" / (doc + ".json"))
+            self.assertEqual([c["etiqueta"] for c in datos["portada"]], etiquetas, doc)
+
+    def test_proyecto_en_la_portada_generada(self):
+        self.crear_todo()
+        pagina = visor.generar_html(self.leer("general"))
+        self.assertIn('"etiqueta": "Proyecto", "valor": "Proyecto de ejemplo"', pagina)
+
+
 class PruebasPrevisualizar(Base):
     def test_no_crea_nada(self):
         otra = Path(self.tmp.name) / "nueva"
@@ -245,6 +274,95 @@ class PruebasImagenYTablas(Base):
         self.crear_todo()
         pagina = visor.generar_html(self.leer("compartidos"))
         self.assertIn('<td class="sinreg" colspan="5">Sin registros</td>', pagina)
+
+
+class PruebasApi(Base):
+    """Rutas del editor, con el servidor real en un hilo y datos inventados."""
+
+    def setUp(self):
+        super().setUp()
+        import threading
+        import servidor
+        self.crear_todo()
+        self.servidor = servidor
+        servidor.ESTADO["app"] = self.app
+        self.http = servidor.crear_servidor(0)
+        self.puerto = self.http.server_address[1]
+        threading.Thread(target=self.http.serve_forever, daemon=True).start()
+
+    def tearDown(self):
+        self.http.shutdown()
+        self.http.server_close()
+        self.servidor.ESTADO["app"] = None
+        super().tearDown()
+
+    def pedir(self, ruta, cuerpo=None):
+        import urllib.error
+        import urllib.request
+        url = "http://127.0.0.1:%d%s" % (self.puerto, ruta)
+        datos = None if cuerpo is None else json.dumps(cuerpo).encode("utf-8")
+        peticion = urllib.request.Request(url, data=datos, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(peticion) as r:
+                return r.status, r.read().decode("utf-8")
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode("utf-8")
+
+    def test_leer_y_guardar_borrador(self):
+        codigo, texto = self.pedir("/api/documento/general")
+        doc = json.loads(texto)
+        self.assertEqual(codigo, 200)
+        doc["secciones"].append({"id": "nueva", "titulo": "Nueva", "bloques": [], "secciones": []})
+        codigo, texto = self.pedir("/api/documento/general", doc)
+        self.assertEqual(codigo, 200)
+        self.assertIn("cambio", json.loads(texto))
+        self.assertEqual(self.leer("general")["secciones"][-1]["id"], "nueva")
+
+    def test_guarda_borrador_aunque_tenga_errores(self):
+        doc = self.leer("general")
+        doc["secciones"][0]["id"] = "Mal Id"
+        codigo, texto = self.pedir("/api/documento/general", doc)
+        self.assertEqual(codigo, 200)
+        self.assertTrue(any(p["nivel"] == "error" for p in json.loads(texto)["problemas"]))
+        self.assertEqual(self.leer("general")["secciones"][0]["id"], "Mal Id")
+
+    def test_rechaza_documento_incorrecto(self):
+        self.assertEqual(self.pedir("/api/documento/general", {"documento": "repositorio", "formato": 1})[0], 400)
+        self.assertEqual(self.pedir("/api/documento/general", [1, 2])[0], 400)
+
+    def test_render_con_referencias(self):
+        codigo, texto = self.pedir("/api/render/general", self.leer("general"))
+        r = json.loads(texto)
+        self.assertEqual(codigo, 200)
+        self.assertIn('data-ref="s:descripcion"', r["src"])
+        self.assertIn("Proyecto de ejemplo", json.dumps(r["cfg"]))
+
+    def test_render_no_guarda(self):
+        doc = self.leer("general")
+        doc["secciones"] = []
+        self.pedir("/api/render/general", doc)
+        self.assertTrue(self.leer("general")["secciones"])
+
+    def test_render_de_documento_roto(self):
+        self.assertEqual(self.pedir("/api/render/general", {"documento": "general"})[0], 400)
+
+    def test_marco_vacio_y_estaticos(self):
+        codigo, texto = self.pedir("/hoja")
+        self.assertEqual(codigo, 200)
+        self.assertIn("window.FOLIUM = null", texto)
+        self.assertEqual(self.pedir("/modelo.js")[0], 200)
+        self.assertEqual(self.pedir("/estilos.css")[0], 404)       # solo se sirve incrustado
+        self.assertEqual(self.pedir("/..%2fCLAUDE.md")[0], 404)
+
+    def test_sin_aplicacion_abierta(self):
+        self.servidor.ESTADO["app"] = None
+        self.assertEqual(self.pedir("/api/documento/general")[0], 409)
+
+    def test_id_retirado_no_se_reutiliza(self):
+        doc = self.leer("general")
+        doc["ids_retirados"] = [doc["secciones"][0]["id"]]
+        self.assertTrue(any("no se reutiliza" in m for m in
+                            [p["mensaje"] for p in validacion.validar(doc)]))
 
 
 class PruebasServidor(unittest.TestCase):
