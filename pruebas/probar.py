@@ -110,6 +110,25 @@ class PruebasVisor(unittest.TestCase):
         self.assertNotIn("https://", h)
 
 
+class PruebasCss(unittest.TestCase):
+    def test_llaves_balanceadas(self):
+        # una llave de mas descarta en silencio las reglas que siguen
+        for nombre in ("estilos.css", "folium.css"):
+            texto = (RAIZ / "web" / nombre).read_text(encoding="utf-8")
+            self.assertEqual(texto.count("{"), texto.count("}"), nombre)
+
+    def test_impresion_anula_la_vista(self):
+        css = (RAIZ / "web" / "estilos.css").read_text(encoding="utf-8")
+        bloque = css[css.index("@media print"):]
+        for regla in ("background:#fff!important", "box-shadow:none!important", "padding:0!important",
+                      "zoom:1!important", "gap:0!important", ".bar{display:none!important}"):
+            self.assertIn(regla, bloque)
+        self.assertIn("@page{size:A4;margin:0}", css)
+
+    def test_estilos_del_editor_solo_en_pantalla(self):
+        self.assertTrue(visor.ESTILO_VISTA.lstrip().startswith("<style>\n@media screen{"))
+
+
 class PruebasCargador(unittest.TestCase):
     def test_tracking(self):
         self.assertTrue(documentos.tracking_valido("DEMOAP"))

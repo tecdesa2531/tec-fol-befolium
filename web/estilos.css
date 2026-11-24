@@ -104,11 +104,15 @@ a.int{color:var(--link);text-decoration:underline}
 
 @page{size:A4;margin:0}
 @media print{
-  html,body{background:#fff}
-  .bar{display:none}
-  #pages{display:block;padding:0;zoom:1!important}
-  .page{box-shadow:none;margin:0;break-after:page}
-  body.guides .page::after{display:none}
+  /* Impresion: solo las hojas, una por pagina A4, sin nada de la vista (fondo, sombras,
+     espacios, zoom, margenes de guia, barra). */
+  html,body{background:#fff!important;margin:0!important;padding:0!important}
+  .bar{display:none!important}
+  #pages{display:block!important;padding:0!important;margin:0!important;gap:0!important;zoom:1!important}
+  .page{box-shadow:none!important;margin:0!important;break-after:page;page-break-after:always}
+  .page:last-child{break-after:auto;page-break-after:auto}
+  body.guides .page::after{display:none!important}
+  #src,#measure{display:none!important}
 }
 
 /* ---------- espacio reservado para diagramas (se reemplaza por la imagen exportada de draw.io) ---------- */

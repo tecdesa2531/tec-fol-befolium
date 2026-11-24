@@ -17,6 +17,9 @@
     <button type="button" role="tab" data-doc="compartidos">Compartidos</button>
   </nav>
   <span id="acciones" hidden>
+    <span id="guardado" class="estado-guardado" role="status">Guardado ✓</span>
+    <button type="button" id="btn-deshacer" title="Deshacer (Ctrl+Z)">Deshacer</button>
+    <button type="button" id="btn-rehacer" title="Rehacer (Ctrl+Y)">Rehacer</button>
     <button type="button" id="btn-guardar" class="primario">Guardar versión</button>
     <span class="menu">
       <button type="button" id="btn-menu" aria-haspopup="menu" aria-expanded="false" aria-label="Más acciones">⋯</button>
@@ -65,11 +68,8 @@
     </div>
   </section>
   <aside id="panel-der" aria-label="Propiedades">
-    <div class="cabecera"><h2>Propiedades</h2>
-      <span class="fila-botones"><button type="button" id="btn-deshacer" title="Deshacer (Ctrl+Z)">Deshacer</button><button type="button" id="btn-rehacer" title="Rehacer (Ctrl+Y)">Rehacer</button></span>
-    </div>
+    <div class="cabecera"><h2>Propiedades</h2></div>
     <div id="props"></div>
-    <p id="guardado" class="ayuda">Guardado ✓</p>
   </aside>
 </div>
 

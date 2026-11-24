@@ -227,7 +227,17 @@
     F.Editor.reiniciar();            // vuelve a leer los JSON de actual/ (se pierde el historial)
     await cargarEstado();
   });
-  $("btn-imprimir").addEventListener("click", () => { menu(false); const h = $("hoja"); if (!h.hidden) h.contentWindow.print(); });
+  /* Imprimir: abre el documento limpio (el mismo HTML que se guarda como version) en otra
+     ventana y lo imprime ahi; nunca se imprime la vista del editor. */
+  $("btn-imprimir").addEventListener("click", async () => {
+    menu(false);
+    const ventana = window.open("about:blank", "_blank");     // se abre ya, para que no lo bloquee el navegador
+    if (!ventana) { F.avisar("El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes de este sitio."); return; }
+    try {
+      await F.Editor.guardarYa();
+      ventana.location.href = "/imprimir/borrador/" + activo;
+    } catch (e) { ventana.close(); F.avisar(e.message); }
+  });
   document.querySelectorAll("#pestanas button").forEach((b) =>
     b.addEventListener("click", () => { activo = b.dataset.doc; pintarPestanas(); mostrarDocumento(); }));
 
@@ -301,6 +311,7 @@
       mostrarResultado(r);
       const g = F.Editor.modelos.general;      // el servidor escribio las versiones vigentes en general.json
       if (g) g.doc.versiones_vigentes = (await api("/api/documento/general")).versiones_vigentes;
+      await F.Editor.actualizarFijos();
       await cargarEstado();
     } catch (e) { mostrarErrorGuardar(e.message); }
   });

@@ -30,7 +30,9 @@
     cont.appendChild(campo("Título", titulo));
 
     cont.appendChild(campo("Identificador", el("code", { texto: s.id })));
-    cont.appendChild(el("p", { class: "ayuda", texto: "El identificador no cambia aunque cambies el título." }));
+    cont.appendChild(el("p", { class: "ayuda", texto: modelo.esFijo(s.id)
+      ? "El identificador ya está en una versión guardada y no cambia aunque cambies el título."
+      : "Se fijará al guardar la primera versión; hasta entonces cambia con el título." }));
 
     const botonNivel = (texto, dir) => {
       const motivo = modelo.motivoNoNivel(s.id, dir);

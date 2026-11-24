@@ -20,7 +20,7 @@
       this.doc = doc;
       this.antes = [];
       this.despues = [];
-      this.provisionales = new Set();   // secciones nuevas cuyo titulo aun no se confirma
+      this.fijos = new Set();           // ids que ya estan en alguna version guardada: no cambian
       this.oyentes = [];
     }
 
@@ -58,6 +58,8 @@
       this.avisar("rehacer");
       return true;
     }
+
+    esFijo(id) { return this.fijos.has(id); }
 
     /* ---------- consultas del arbol ---------- */
     buscar(id, lista, nivel, padre) {
@@ -178,7 +180,6 @@
         nuevoId = this.idUnico(slug(titulo));
         d.lista.splice(d.indice, 0, { id: nuevoId, titulo: titulo, bloques: [], secciones: [] });
       });
-      this.provisionales.add(nuevoId);
       return nuevoId;
     }
 
@@ -194,21 +195,35 @@
       });
     }
 
-    /* Confirma el titulo. En una seccion nueva, la primera vez se genera su identificador
-       estable a partir del titulo; despues ya no cambia. Devuelve el identificador. */
+    /* Cambia el titulo. Mientras la seccion no este en ninguna version guardada, su
+       identificador se regenera a partir del titulo (y los enlaces internos que la nombraban
+       se actualizan); desde la primera version guardada queda fijo. Devuelve el identificador. */
     confirmarTitulo(id, titulo) {
       let idFinal = id;
-      const provisional = this.provisionales.has(id);
       this.cambiar(() => {
         const r = this.buscar(id);
         r.sec.titulo = titulo;
-        if (provisional) {
-          idFinal = this.idUnico(slug(titulo), id);
-          r.sec.id = idFinal;
+        if (!this.esFijo(id)) {
+          const nuevo = this.idUnico(slug(titulo), id);
+          if (nuevo !== id) {
+            r.sec.id = nuevo;
+            this.reescribirEnlaces(this.doc, id, nuevo);
+            idFinal = nuevo;
+          }
         }
       });
-      this.provisionales.delete(id);
       return idFinal;
+    }
+
+    reescribirEnlaces(nodo, viejo, nuevo) {
+      const de = "](#" + viejo + ")", a = "](#" + nuevo + ")";
+      if (Array.isArray(nodo)) {
+        nodo.forEach((x, i) => { if (typeof x === "string") nodo[i] = x.split(de).join(a); else this.reescribirEnlaces(x, viejo, nuevo); });
+      } else if (nodo && typeof nodo === "object") {
+        Object.keys(nodo).forEach((k) => {
+          if (typeof nodo[k] === "string") nodo[k] = nodo[k].split(de).join(a); else this.reescribirEnlaces(nodo[k], viejo, nuevo);
+        });
+      }
     }
 
     quitarSeccion(id) {
@@ -217,7 +232,7 @@
         const ids = this.idsDe(r.sec);
         r.lista.splice(r.indice, 1);
         const retirados = new Set(this.doc.ids_retirados || []);
-        ids.forEach((i) => { if (!this.provisionales.has(i)) retirados.add(i); });
+        ids.forEach((i) => { if (this.esFijo(i)) retirados.add(i); });   // solo los ya publicados
         if (retirados.size) this.doc.ids_retirados = Array.from(retirados);
       });
     }

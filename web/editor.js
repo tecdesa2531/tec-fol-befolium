@@ -30,10 +30,19 @@
     if (E.modelos[nombre]) return E.modelos[nombre];
     const doc = await F.api("/api/documento/" + nombre);
     const m = new F.Modelo(nombre, doc);
+    m.fijos = new Set((await F.api("/api/ids_fijos/" + nombre)).ids);
     m.alCambiar(() => alCambiarModelo(m));
     E.modelos[nombre] = m;
     return m;
   }
+
+  /* Despues de guardar una version, sus secciones pasan a tener identificador fijo. */
+  E.actualizarFijos = async function () {
+    for (const nombre of Object.keys(E.modelos)) {
+      E.modelos[nombre].fijos = new Set((await F.api("/api/ids_fijos/" + nombre)).ids);
+    }
+    F.Propiedades.pintar();
+  };
 
   E.activar = async function (nombre) {
     await cargar(nombre);

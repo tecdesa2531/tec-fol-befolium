@@ -142,6 +142,25 @@ def errores_por_documento(actuales):
             for d, doc in actuales.items() if doc is not None}
 
 
+def ids_fijos(app, doc):
+    """Identificadores de seccion que ya estan en alguna version guardada del documento."""
+    ids = set()
+
+    def recorrer(secciones):
+        for s in secciones:
+            ids.add(s.get("id"))
+            recorrer(s.get("secciones", []))
+
+    for ruta in app.versiones(doc).glob("*.json"):
+        if ruta.name.endswith(".imagenes.json"):
+            continue
+        try:
+            recorrer(documentos.cargar_documento(ruta).get("secciones", []))
+        except (ValueError, AttributeError):
+            continue
+    return sorted(i for i in ids if i)
+
+
 def propuesta(app, hoy=None):
     """Datos para el dialogo Guardar version."""
     actuales = cargar_actuales(app)

@@ -74,7 +74,10 @@ Para probar con datos inventados: `python herramientas/sembrar_prueba.py`, y abr
 ```powershell
 python pruebas/probar.py
 python pruebas/probar_aplicacion.py
+python pruebas/probar_impresion.py
 ```
+
+`probar_impresion.py` usa Edge o Chrome sin pantalla (si no los encuentra, se omite; puedes indicar el ejecutable en la variable `FOLIUM_NAVEGADOR`).
 
 Opcional, solo si tienes Node (no hace falta para usar Folium):
 

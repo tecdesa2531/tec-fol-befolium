@@ -90,10 +90,14 @@ class Manejador(BaseHTTPRequestHandler):
             self.json(200, {"carpeta": carpeta})
         elif ruta == "/api/guardar/propuesta":
             self.con_aplicacion(lambda app: self.json(200, versiones.propuesta(app)))
+        elif re.fullmatch(r"/api/ids_fijos/(general|repositorio|compartidos)", ruta):
+            self.con_aplicacion(lambda app: self.json(200, {"ids": versiones.ids_fijos(app, ruta.split("/")[3])}))
         elif ruta == "/hoja":
             self.responder(200, visor.generar_marco().encode("utf-8"), "text/html; charset=utf-8")
         elif re.fullmatch(r"/api/documento/(general|repositorio|compartidos)", ruta):
             self.con_aplicacion(lambda app: self.leer_documento(app, ruta.split("/")[3]))
+        elif re.fullmatch(r"/imprimir/borrador/(general|repositorio|compartidos)", ruta):
+            self.con_aplicacion(lambda app: self.servir_borrador(app, ruta.split("/")[3]))
         elif re.fullmatch(r"/imprimir/(general|repositorio|compartidos)/[0-9.\-v]+", ruta):
             _, _, doc, version = ruta.split("/")
             self.con_aplicacion(lambda app: self.servir_impresion(app, doc, version))
@@ -183,7 +187,7 @@ class Manejador(BaseHTTPRequestHandler):
         self.json(200, res)
 
     def servir_impresion(self, app, doc, version):
-        """Version guardada, con el titulo igual al nombre del PDF, que abre la impresion."""
+        """Version guardada: el mismo HTML que se guardo, con el titulo igual al nombre del PDF."""
         if not versiones.version_valida(doc, version):
             self.texto(404, "No encontrado")
             return
@@ -192,11 +196,30 @@ class Manejador(BaseHTTPRequestHandler):
         if not archivo.is_file():
             self.texto(404, "No existe esa versión guardada.")
             return
-        pagina = archivo.read_text(encoding="utf-8")
-        pagina = re.sub(r"<title>.*?</title>", "<title>%s</title>" % base, pagina, count=1, flags=re.S)
-        arranque = ("<script>(function e(){ if(window.__done){ setTimeout(function(){window.print();},400); }"
-                    " else { setTimeout(e,200); } })();</script>\n</body>")
-        pagina = pagina.replace("</body>", arranque, 1)
+        self.responder_impresion(archivo.read_text(encoding="utf-8"), base)
+
+    def servir_borrador(self, app, doc):
+        """Borrador: el mismo HTML que se guarda como version, generado desde actual/."""
+        datos = documentos.cargar_documento(app.actual / (doc + ".json"))
+        if datos is None:
+            self.texto(404, "Todavía no existe %s.json" % doc)
+            return
+        if any(p["nivel"] == "error" for p in validacion.validar(datos)):
+            self.texto(422, "El documento tiene errores de validación; corrígelos para imprimirlo.")
+            return
+        vigentes = {d: versiones.ultima(app, d) for d in ("repositorio", "compartidos")}
+        pagina = visor.generar_html(datos, carpeta_actual=app.actual,
+                                    tokens=versiones.tokens_de(app, vigentes))
+        self.responder_impresion(pagina, "%s_%s_borrador" % (app.slug, doc))
+
+    def responder_impresion(self, pagina, titulo):
+        """Documento limpio: sin estilos del editor. Abre la impresion al terminar de paginar
+        (salvo con ?sin_imprimir, que usan las pruebas)."""
+        pagina = re.sub(r"<title>.*?</title>", "<title>%s</title>" % titulo, pagina, count=1, flags=re.S)
+        if "sin_imprimir" not in self.path:
+            arranque = ("<script>(function e(){ if(window.__done){ setTimeout(function(){window.print();},400); }"
+                        " else { setTimeout(e,200); } })();</script>\n</body>")
+            pagina = pagina.replace("</body>", arranque, 1)
         self.responder(200, pagina.encode("utf-8"), "text/html; charset=utf-8")
 
     def servir_referencia(self, nombre):

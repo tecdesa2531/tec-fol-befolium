@@ -45,6 +45,8 @@ button svg{width:16px;height:16px;flex:none}
 #app-info{font-weight:400;color:var(--suave)}
 #acciones{display:flex;gap:8px;justify-content:flex-end;align-items:center}
 #acciones .menu{position:relative}
+.estado-guardado{color:var(--suave);font-size:13px;margin-right:4px;white-space:nowrap}
+.estado-guardado.error{color:var(--error)}
 #btn-menu{padding:7px 12px;font-size:18px;line-height:1}
 #menu-acciones{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:200px;padding:6px;
   background:var(--panel);border-radius:var(--radio);box-shadow:var(--sombra-dialogo)}
@@ -126,7 +128,7 @@ dialog .lista{display:flex;flex-wrap:wrap;gap:8px}
 #panel-izq h2.separada{margin-top:22px}
 .fila-botones{display:flex;flex-wrap:wrap;gap:6px}
 .fila-botones.separada{margin-top:18px}
-#panel-izq button,#panel-der button{padding:4px 10px;font-size:13px}
+#panel-izq button,#panel-der button,#acciones button:not(.primario){padding:4px 10px;font-size:13px}
 button.peligro{color:var(--error);border-color:#E6B8B4}
 
 #arbol ul{list-style:none;margin:0;padding:0}
@@ -155,8 +157,7 @@ button.peligro{color:var(--error);border-color:#E6B8B4}
 #props .campo>label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:4px}
 #props input[type="text"]{width:100%;padding:6px 8px;font:inherit;border:1px solid var(--linea-fuerte);border-radius:6px}
 #props label.casilla{display:flex;align-items:center;gap:6px;margin:6px 0;font-size:13px}
-#guardado{margin:14px 0 0}
-#guardado.error{color:var(--error)}
+
 
 #aviso.con-errores{background:var(--error-claro)}
 #aviso-flotante{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:100;max-width:min(520px,90vw);

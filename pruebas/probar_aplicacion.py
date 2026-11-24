@@ -354,6 +354,29 @@ class PruebasApi(Base):
         self.assertEqual(self.pedir("/estilos.css")[0], 404)       # solo se sirve incrustado
         self.assertEqual(self.pedir("/..%2fCLAUDE.md")[0], 404)
 
+    def test_ids_fijos_vienen_de_las_versiones_guardadas(self):
+        codigo, texto = self.pedir("/api/ids_fijos/general")
+        self.assertEqual((codigo, json.loads(texto)["ids"]), (200, []))
+        versiones.guardar_version(self.app, {"repositorio": "0.1.0"}, DIA1)
+        ids = json.loads(self.pedir("/api/ids_fijos/general")[1])["ids"]
+        self.assertIn(self.leer("general")["secciones"][0]["id"], ids)
+        doc = self.leer("general")
+        doc["secciones"].append({"id": "solo-borrador", "titulo": "X", "bloques": [], "secciones": []})
+        self.pedir("/api/documento/general", doc)
+        self.assertNotIn("solo-borrador", json.loads(self.pedir("/api/ids_fijos/general")[1])["ids"])
+
+    def test_borrador_para_imprimir_es_el_documento_limpio(self):
+        codigo, texto = self.pedir("/imprimir/borrador/general?sin_imprimir=1")
+        self.assertEqual(codigo, 200)
+        self.assertIn("<title>demoap_general_borrador</title>", texto)
+        for marca in ("data-ref", "f-sel", "F0F1F5", "window.print"):
+            self.assertNotIn(marca, texto)
+        self.assertIn("window.print", self.pedir("/imprimir/borrador/general")[1])   # el boton si imprime
+        doc = self.leer("general")
+        doc["secciones"][0]["id"] = "Mal Id"
+        self.pedir("/api/documento/general", doc)
+        self.assertEqual(self.pedir("/imprimir/borrador/general")[0], 422)
+
     def test_sin_aplicacion_abierta(self):
         self.servidor.ESTADO["app"] = None
         self.assertEqual(self.pedir("/api/documento/general")[0], 409)

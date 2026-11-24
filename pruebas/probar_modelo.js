@@ -50,23 +50,49 @@ prueba("mover quita el anexo si baja de nivel", () => {
   assert.strictEqual(m.buscar("c").sec.anexo, undefined);
 });
 
-prueba("titulo de una seccion nueva genera su id una sola vez", () => {
+prueba("el id sigue al titulo mientras la seccion no este en una version guardada", () => {
   const m = new Modelo("general", doc());
   const id = m.agregarSeccion(null, "despues");
-  const nuevo = m.confirmarTitulo(id, "Pendientes del equipo");
+  assert.strictEqual(id, "nueva-seccion");
+  let nuevo = m.confirmarTitulo(id, "Pendientes del equipo");
   assert.strictEqual(nuevo, "pendientes-del-equipo");
-  assert.strictEqual(m.confirmarTitulo(nuevo, "Otro titulo"), "pendientes-del-equipo");
-  assert.strictEqual(m.buscar("pendientes-del-equipo").sec.titulo, "Otro titulo");
+  nuevo = m.confirmarTitulo(nuevo, "Otro titulo");                // sigue sin estar guardada: cambia
+  assert.strictEqual(nuevo, "otro-titulo");
+  assert.ok(m.buscar("otro-titulo") && !m.buscar("pendientes-del-equipo"));
+});
+
+prueba("desde la version guardada el id queda fijo", () => {
+  const m = new Modelo("general", doc());
+  m.fijos = new Set(["a", "a1", "a1x", "b", "c"]);
+  assert.strictEqual(m.confirmarTitulo("b", "Beta renombrada"), "b");
+  assert.strictEqual(m.buscar("b").sec.titulo, "Beta renombrada");
+});
+
+prueba("al regenerar un id se actualizan los enlaces internos", () => {
+  const d = doc();
+  d.secciones[0].bloques[0].texto = "ver [Beta](#b) y [otra](#c)";
+  const m = new Modelo("general", d);
+  m.confirmarTitulo("b", "Beta Nueva");
+  assert.strictEqual(m.buscar("a").sec.bloques[0].texto, "ver [Beta](#beta-nueva) y [otra](#c)");
+});
+
+prueba("un id regenerado no choca con otro ni con uno retirado", () => {
+  const m = new Modelo("general", doc());
+  m.fijos = new Set(["a", "a1", "a1x", "b", "c"]);
+  m.quitarSeccion("c");                                   // "c" queda retirado
+  const id = m.agregarSeccion(null, "despues");
+  assert.strictEqual(m.confirmarTitulo(id, "C"), "c-2");
+  assert.strictEqual(m.confirmarTitulo("c-2", "Alfa"), "alfa");
 });
 
 prueba("quitar: cuenta el contenido y retira los ids", () => {
   const m = new Modelo("general", doc());
   assert.deepStrictEqual(m.contenidoDe("a"), { bloques: 1, subsecciones: 2 });
+  m.fijos = new Set(["a", "a1", "a1x"]);
   m.quitarSeccion("a");
   assert.strictEqual(ids(m.doc.secciones), "b,c");
   assert.deepStrictEqual(m.doc.ids_retirados.sort(), ["a", "a1", "a1x"]);
-  const id = m.agregarSeccion(null, "despues", "Alfa");      // "alfa" no choca; "a" tampoco se reutiliza
-  assert.strictEqual(m.idUnico("a"), "a-2");
+  assert.strictEqual(m.idUnico("a"), "a-2");                 // un id retirado no se reutiliza
 });
 
 prueba("duplicar con ids nuevos", () => {

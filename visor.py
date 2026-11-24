@@ -188,16 +188,18 @@ def fragmento(doc, version=None, fecha=None, carpeta_actual=None, tokens=None, e
 # Marco del editor: sin la barra de vista previa oscura, con el fondo claro de la
 # interfaz y los marcadores de seleccion. No cambia las hojas ni la impresion.
 ESTILO_VISTA = """<style>
+@media screen{
 html,body{background:#F0F1F5}
 .bar{display:none}
 #pages{padding-top:24px}
-@media screen{.page{box-shadow:0 1px 3px rgba(20,30,50,.10),0 6px 18px rgba(20,30,50,.10)}}
+.page{box-shadow:0 1px 3px rgba(20,30,50,.10),0 6px 18px rgba(20,30,50,.10)}
 .f-sel{outline:2px solid #0070C0;outline-offset:3px}
 .f-editando{outline:2px solid #0070C0;outline-offset:3px;background:#E8F2FA;cursor:text}
 .f-linea{position:absolute;height:3px;background:#0070C0;border-radius:2px;pointer-events:none;z-index:50}
-@media print{.f-sel,.f-editando{outline:none;background:none}.f-linea{display:none}}
+}
+@media print{.f-linea{display:none!important}}
 </style>
-"""
+""" 
 
 PLANTILLA = """<!DOCTYPE html>
 <html lang="es">
