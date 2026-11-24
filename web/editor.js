@@ -3,13 +3,14 @@
   "use strict";
 
   const RETRASO_GUARDADO = 400;
+  const TIPOS_TEXTO = ["parrafo", "nota", "nota_destacada", "etiqueta"];
 
   const E = F.Editor = {
     modelos: {},            // nombre del documento -> Modelo (cada uno con su historial)
     activo: null,
-    seleccion: null,        // { tipo: "seccion", id }
+    seleccion: null,        // { tipo: "seccion", id } o { tipo: "bloque", sid, bid }
     origenArrastrado: null,
-    pendienteEditar: null,  // id de la seccion nueva cuyo titulo se edita al terminar de pintar
+    pendienteEditar: null,  // { seccion: id } o { bloque: [sid, bid] }: se edita al terminar de pintar
   };
 
   let temporizadores = {};
@@ -54,9 +55,15 @@
   };
 
   /* ---------- cambios: pintar y guardar ---------- */
+  function seleccionExiste(m) {
+    const s = E.seleccion;
+    if (!s) return true;
+    return s.tipo === "seccion" ? !!m.buscar(s.id) : !!m.bloqueDe(s.sid, s.bid);
+  }
+
   async function alCambiarModelo(m) {
     if (m !== E.modelo()) return;
-    if (E.seleccion && !m.buscar(E.seleccion.id)) E.seleccion = null;
+    if (!seleccionExiste(m)) E.seleccion = null;
     F.Arbol.pintar();
     F.Propiedades.pintar();
     programarGuardado(m.nombre);
@@ -66,11 +73,14 @@
       F.avisar(e.message);
       return;
     }
-    if (E.pendienteEditar && m.buscar(E.pendienteEditar)) {
-      const id = E.pendienteEditar;
-      E.pendienteEditar = null;
-      F.Hoja.marcarSeleccion({ tipo: "seccion", id: id }, true);
-      F.Hoja.editarTitulo(id, m.buscar(id).sec.titulo);
+    const p = E.pendienteEditar;
+    E.pendienteEditar = null;
+    if (p && p.seccion && m.buscar(p.seccion)) {
+      F.Hoja.marcarSeleccion({ tipo: "seccion", id: p.seccion }, true);
+      F.Hoja.editarTitulo(p.seccion, m.buscar(p.seccion).sec.titulo);
+    } else if (p && p.bloque && m.bloqueDe(p.bloque[0], p.bloque[1])) {
+      F.Hoja.marcarSeleccion({ tipo: "bloque", sid: p.bloque[0], bid: p.bloque[1] }, true);
+      F.Hoja.editarBloque(p.bloque[0], p.bloque[1], m.bloqueDe(p.bloque[0], p.bloque[1]).bloque.texto);
     }
   }
 
@@ -102,7 +112,7 @@
     return colaGuardado;
   }
 
-  /* Guarda ahora lo que este pendiente (antes de guardar una version). */
+  /* Guarda ahora lo que este pendiente (antes de guardar una version o de imprimir). */
   E.guardarYa = async function () {
     Object.keys(temporizadores).forEach((n) => { clearTimeout(temporizadores[n]); guardar(n); });
     await colaGuardado;
@@ -124,18 +134,34 @@
     F.Hoja.marcarSeleccion(sel, !!desplazar);
   };
 
+  /* ref de la hoja: s:<seccion> | b:<seccion>:<bloque> | f, c, h: dentro de una tabla */
   E.alHacerClic = function (ref) {
     if (!ref) { E.seleccionar(null); return; }
-    const partes = ref.split(":");
-    if (partes[0] === "s") E.seleccionar({ tipo: "seccion", id: partes.slice(1).join(":") });
+    const p = ref.split(":");
+    if (p[0] === "s") E.seleccionar({ tipo: "seccion", id: p.slice(1).join(":") });
+    else if (p.length >= 3) E.seleccionar({ tipo: "bloque", sid: p[1], bid: p[2] });
   };
 
   E.alDobleClic = function (ref) {
-    const partes = ref.split(":");
-    if (partes[0] !== "s") return;
-    const id = partes.slice(1).join(":");
-    E.seleccionar({ tipo: "seccion", id: id });
-    F.Hoja.editarTitulo(id, E.modelo().buscar(id).sec.titulo);
+    const p = ref.split(":");
+    if (p[0] === "s") {
+      const id = p.slice(1).join(":");
+      E.seleccionar({ tipo: "seccion", id: id });
+      F.Hoja.editarTitulo(id, E.modelo().buscar(id).sec.titulo);
+    } else if (p[0] === "b") {
+      E.editarBloque(p[1], p[2]);
+    }
+  };
+
+  E.esTexto = function (sid, bid) {
+    const o = E.modelo().bloqueDe(sid, bid);
+    return !!o && TIPOS_TEXTO.includes(o.bloque.tipo);
+  };
+
+  E.editarBloque = function (sid, bid) {
+    if (!E.esTexto(sid, bid)) return;
+    E.seleccionar({ tipo: "bloque", sid: sid, bid: bid });
+    F.Hoja.editarBloque(sid, bid, E.modelo().bloqueDe(sid, bid).bloque.texto);
   };
 
   /* ---------- operaciones (con avisos y confirmaciones) ---------- */
@@ -147,7 +173,7 @@
   E.titulo = function (id, texto) {
     const m = E.modelo();
     if (texto) {
-      const eraSeleccionada = !!(E.seleccion && E.seleccion.id === id);
+      const eraSeleccionada = !!(E.seleccion && E.seleccion.tipo === "seccion" && E.seleccion.id === id);
       const nuevoId = intentar(() => m.confirmarTitulo(id, texto));
       if (nuevoId && eraSeleccionada) E.seleccionar({ tipo: "seccion", id: nuevoId });
     } else {
@@ -155,17 +181,60 @@
     }
   };
 
+  /* Texto de un bloque confirmado (texto) o cancelado (null). */
+  E.texto = function (sid, bid, texto) {
+    const m = E.modelo();
+    if (texto === null || texto === "") { F.Hoja.render(m); return; }
+    if (!intentar(() => m.textoBloque(sid, bid, texto))) F.Hoja.render(m);   // sin cambios: repinta
+  };
+
   E.agregarSeccion = function () {
     const m = E.modelo();
-    const sel = E.seleccion;
-    const id = sel ? intentar(() => m.agregarSeccion(sel.id, "despues")) : intentar(() => m.agregarSeccion(null, "despues"));
-    if (id) { E.seleccion = { tipo: "seccion", id: id }; E.pendienteEditar = id; F.Arbol.pintar(); F.Propiedades.pintar(); }
+    const s = E.seleccion;
+    const ref = s ? (s.tipo === "seccion" ? s.id : s.sid) : null;
+    const id = intentar(() => m.agregarSeccion(ref, "despues"));
+    if (id) { E.seleccion = { tipo: "seccion", id: id }; E.pendienteEditar = { seccion: id }; F.Arbol.pintar(); F.Propiedades.pintar(); }
   };
+
+  /* Inserta un bloque nuevo (doble clic en la paleta): despues del bloque seleccionado o al
+     final de la seccion seleccionada. */
+  E.insertar = function (tipo) {
+    if (tipo === "seccion") { E.agregarSeccion(); return; }
+    const m = E.modelo();
+    const s = E.seleccion;
+    let sid = null, indice = null;
+    if (s && s.tipo === "bloque") { sid = s.sid; indice = m.bloqueDe(s.sid, s.bid).indice + 1; }
+    else if (s && s.tipo === "seccion") { sid = s.id; }
+    else if (m.doc.secciones.length) {
+      const ultima = (lista) => { const u = lista[lista.length - 1]; return (u.secciones && u.secciones.length) ? ultima(u.secciones) : u; };
+      sid = ultima(m.doc.secciones).id;
+    }
+    if (!sid) { F.avisar("Primero agrega una sección."); return; }
+    colocarBloque(m, sid, indice, tipo);
+  };
+
+  function colocarBloque(m, sid, indice, tipo) {
+    const bid = intentar(() => m.agregarBloque(sid, indice, tipo));
+    if (!bid) return;
+    E.seleccion = { tipo: "bloque", sid: sid, bid: bid };
+    E.pendienteEditar = { bloque: [sid, bid] };
+    F.Arbol.pintar();
+    F.Propiedades.pintar();
+  }
 
   E.duplicarSeccion = function (id) {
     const nuevo = intentar(() => E.modelo().duplicarSeccion(id));
     if (nuevo) E.seleccionar({ tipo: "seccion", id: nuevo }, true);
   };
+
+  E.duplicarBloque = function (sid, bid) {
+    const nuevo = intentar(() => E.modelo().duplicarBloque(sid, bid));
+    if (nuevo) E.seleccionar({ tipo: "bloque", sid: sid, bid: nuevo }, true);
+  };
+
+  E.quitarBloque = function (sid, bid) { intentar(() => E.modelo().quitarBloque(sid, bid)); };
+  E.tipoBloque = function (sid, bid, tipo) { intentar(() => E.modelo().tipoBloque(sid, bid, tipo)); };
+  E.conSiguiente = function (sid, bid, valor) { intentar(() => E.modelo().conSiguiente(sid, bid, valor)); };
 
   E.quitarSeccion = async function (id) {
     const m = E.modelo();
@@ -190,24 +259,39 @@
   E.rehacer = function () { const m = E.modelo(); if (m) m.rehacer(); };
 
   /* ---------- arrastrar y soltar ---------- */
+  /* Devuelve { clase: "nuevo" | "seccion" | "bloque", tipo } o null si no es de Folium. */
   E.tipoArrastrado = function (dt) {
     if (!dt) return null;
     const tipos = Array.from(dt.types);
-    if (tipos.includes(F.Arbol.TIPO_NUEVO)) return "nuevo";
-    if (tipos.includes(F.Arbol.TIPO_SECCION)) return "seccion";
+    const nuevo = tipos.find((t) => t.startsWith(F.Arbol.PREFIJO_NUEVO));
+    if (nuevo) return { clase: "nuevo", tipo: nuevo.slice(F.Arbol.PREFIJO_NUEVO.length) };
+    if (tipos.includes(F.Arbol.TIPO_SECCION)) return { clase: "seccion", tipo: "seccion" };
+    if (tipos.includes(F.Arbol.TIPO_BLOQUE)) return { clase: "bloque", tipo: "bloque" };
     return null;
   };
 
-  /* destino: { zona: "antes" | "despues" | "dentro" | "fin", ref } */
-  E.alSoltar = function (tipo, dt, destino) {
+  E.esBloque = (a) => a.clase === "bloque" || (a.clase === "nuevo" && a.tipo !== "seccion");
+
+  /* destino de secciones: { zona: "antes" | "despues" | "dentro" | "fin", ref }
+     destino de bloques:   { bloque: true, sid, indice } o { zona: "dentro", ref } (fila del arbol) */
+  E.alSoltar = function (arrastrado, dt, destino) {
     const m = E.modelo();
+    if (E.esBloque(arrastrado)) {
+      const sid = destino.bloque ? destino.sid : destino.ref;
+      const indice = destino.bloque ? destino.indice : null;
+      if (!sid) return;
+      if (arrastrado.clase === "nuevo") { colocarBloque(m, sid, indice, arrastrado.tipo); return; }
+      const [origenSid, origenBid] = dt.getData(F.Arbol.TIPO_BLOQUE).split(":");
+      const nuevo = intentar(() => m.moverBloque(origenSid, origenBid, sid, indice));
+      if (nuevo) E.seleccionar({ tipo: "bloque", sid: sid, bid: nuevo });
+      return;
+    }
     const fin = destino.zona === "fin";
     const ref = fin ? null : destino.ref;
     const zona = fin ? "despues" : destino.zona;
-    if (tipo === "nuevo") {
-      if (dt.getData(F.Arbol.TIPO_NUEVO) !== "seccion") return;
+    if (arrastrado.clase === "nuevo") {
       const id = intentar(() => m.agregarSeccion(ref, zona));
-      if (id) { E.seleccion = { tipo: "seccion", id: id }; E.pendienteEditar = id; F.Arbol.pintar(); F.Propiedades.pintar(); }
+      if (id) { E.seleccion = { tipo: "seccion", id: id }; E.pendienteEditar = { seccion: id }; F.Arbol.pintar(); F.Propiedades.pintar(); }
     } else {
       const id = dt.getData(F.Arbol.TIPO_SECCION);
       if (intentar(() => m.moverSeccion(id, ref, zona))) E.seleccionar({ tipo: "seccion", id: id }, true);
@@ -221,12 +305,18 @@
     if (document.querySelector("dialog[open]")) return;
     const ctrl = ev.ctrlKey || ev.metaKey;
     const k = ev.key.toLowerCase();
+    const s = E.seleccion;
     if (ctrl && k === "z" && !ev.shiftKey) { ev.preventDefault(); E.deshacer(); }
     else if (ctrl && (k === "y" || (k === "z" && ev.shiftKey))) { ev.preventDefault(); E.rehacer(); }
     else if (k === "escape") E.seleccionar(null);
-    else if ((k === "delete" || k === "supr") && E.seleccion && E.seleccion.tipo === "seccion") {
+    else if (k === "enter" && s && s.tipo === "bloque") { ev.preventDefault(); E.editarBloque(s.sid, s.bid); }
+    else if (k === "enter" && s && s.tipo === "seccion") {
       ev.preventDefault();
-      E.quitarSeccion(E.seleccion.id);
+      F.Hoja.editarTitulo(s.id, E.modelo().buscar(s.id).sec.titulo);
+    }
+    else if ((k === "delete" || k === "supr") && s) {
+      ev.preventDefault();
+      if (s.tipo === "seccion") E.quitarSeccion(s.id); else E.quitarBloque(s.sid, s.bid);
     }
   };
 

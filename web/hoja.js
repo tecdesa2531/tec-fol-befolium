@@ -1,5 +1,5 @@
-/* Puente con las hojas A4 (iframe): pintar el modelo, marcar la seleccion, editar titulos
-   en la hoja y recibir lo que se arrastra encima. */
+/* Puente con las hojas A4 (iframe): pintar el modelo, marcar la seleccion, editar textos
+   en la hoja, arrastrar bloques y recibir lo que se suelta encima. */
 (function (F) {
   "use strict";
 
@@ -12,7 +12,8 @@
   const documento = () => iframe().contentDocument;
 
   function escapar(ref) { return ref.replace(/["\\]/g, "\\$&"); }
-  function elementoDe(ref) { return documento().querySelector('[data-ref="' + escapar(ref) + '"]'); }
+  function elementosDe(ref) { return Array.from(documento().querySelectorAll('[data-ref="' + escapar(ref) + '"]')); }
+  function elementoDe(ref) { return elementosDe(ref)[0] || null; }
 
   /* ---------- carga del marco ---------- */
   function asegurarMarco() {
@@ -28,6 +29,7 @@
     const d = documento();
     d.addEventListener("click", (ev) => {
       if (ev.target.closest("a")) ev.preventDefault();
+      if (ev.target.closest(".f-asa")) return;
       const t = ev.target.closest("[data-ref]");
       F.Editor.alHacerClic(t ? t.dataset.ref : null);
     });
@@ -36,20 +38,29 @@
       if (t) F.Editor.alDobleClic(t.dataset.ref);
     });
     d.addEventListener("keydown", (ev) => F.Editor.alTeclear(ev));
+    d.addEventListener("dragstart", (ev) => {
+      const asa = ev.target.closest && ev.target.closest(".f-asa");
+      if (!asa) return;
+      ev.dataTransfer.setData(F.Arbol.TIPO_BLOQUE, asa.dataset.bloque);
+      ev.dataTransfer.effectAllowed = "move";
+    });
+    d.addEventListener("dragend", ocultarLinea);
     d.addEventListener("dragover", (ev) => {
-      const tipo = F.Editor.tipoArrastrado(ev.dataTransfer);
-      if (!tipo) return;
+      const arrastrado = F.Editor.tipoArrastrado(ev.dataTransfer);
+      if (!arrastrado) return;
+      const destino = destinoSoltar(ev, arrastrado);
+      if (!destino) { ocultarLinea(); return; }
       ev.preventDefault();
-      mostrarLinea(destinoSoltar(ev));
+      mostrarLinea(destino);
     });
     d.addEventListener("dragleave", (ev) => { if (!ev.relatedTarget) ocultarLinea(); });
     d.addEventListener("drop", (ev) => {
-      const tipo = F.Editor.tipoArrastrado(ev.dataTransfer);
-      if (!tipo) return;
+      const arrastrado = F.Editor.tipoArrastrado(ev.dataTransfer);
+      if (!arrastrado) return;
       ev.preventDefault();
-      const destino = destinoSoltar(ev);
+      const destino = destinoSoltar(ev, arrastrado);
       ocultarLinea();
-      F.Editor.alSoltar(tipo, ev.dataTransfer, destino);
+      if (destino) F.Editor.alSoltar(arrastrado, ev.dataTransfer, destino);
     });
   }
 
@@ -71,25 +82,55 @@
   }
 
   /* ---------- seleccion ---------- */
+  function refDe(sel) {
+    if (!sel) return null;
+    if (sel.tipo === "seccion") return "s:" + sel.id;
+    if (sel.tipo === "bloque") return "b:" + sel.sid + ":" + sel.bid;
+    return null;
+  }
+
   function marcarSeleccion(sel, desplazar) {
     if (!marcoListo) return;
     const d = documento();
     d.querySelectorAll(".f-sel").forEach((e) => e.classList.remove("f-sel"));
-    if (!sel || sel.tipo !== "seccion") return;
-    const e = elementoDe("s:" + sel.id);
-    if (!e) return;
-    e.classList.add("f-sel");
-    if (desplazar) e.scrollIntoView({ block: "center", behavior: "smooth" });
+    d.querySelectorAll(".f-asa").forEach((e) => e.remove());
+    const ref = refDe(sel);
+    if (!ref) return;
+    const elementos = elementosDe(ref);
+    if (!elementos.length) return;
+    elementos.forEach((e) => e.classList.add("f-sel"));
+    if (sel.tipo === "bloque") ponerAsa(elementos[0], sel);
+    if (desplazar) elementos[0].scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
-  /* ---------- edicion del titulo en la hoja ---------- */
-  function editarTitulo(id, textoCrudo) {
-    const h = elementoDe("s:" + id);
+  /* asa para arrastrar el bloque seleccionado, en el margen izquierdo de la hoja */
+  function ponerAsa(elemento, sel) {
+    const d = documento();
+    const w = ventana();
+    const r = elemento.getBoundingClientRect();
+    const c = elemento.closest(".content").getBoundingClientRect();
+    const asa = d.createElement("div");
+    asa.className = "f-asa";
+    asa.draggable = true;
+    asa.title = "Arrastra para mover el bloque";
+    asa.dataset.bloque = sel.sid + ":" + sel.bid;
+    asa.textContent = "⋮⋮";
+    asa.style.top = (r.top + w.scrollY) + "px";
+    asa.style.left = (c.left + w.scrollX - 26) + "px";
+    d.body.appendChild(asa);
+  }
+
+  /* ---------- edicion de texto en la hoja ----------
+     Se edita el texto con su sintaxis (`codigo`, **negrita**, [texto](url)), sin numeros.
+     Enter confirma, Mayus+Enter agrega un salto de linea, Esc cancela. */
+  function editarTexto(ref, textoCrudo, alTerminar) {
+    const h = elementoDe(ref);
     if (!h) return;
     const d = documento();
-    h.textContent = textoCrudo;                       // se edita el texto con su sintaxis, sin numero
+    h.textContent = textoCrudo;
     h.contentEditable = "plaintext-only";
     h.classList.add("f-editando");
+    h.style.whiteSpace = "pre-wrap";
     h.focus();
     const rango = d.createRange();
     rango.selectNodeContents(h);
@@ -100,23 +141,38 @@
     const terminar = (confirmar) => {
       if (terminado) return;
       terminado = true;
-      const texto = h.textContent.replace(/\s+/g, " ").trim();
+      const texto = h.textContent.replace(/\r/g, "").replace(/^\n+|\n+$/g, "");
       h.contentEditable = "false";
       h.classList.remove("f-editando");
-      F.Editor.titulo(id, confirmar ? texto : null);
+      h.style.whiteSpace = "";
+      alTerminar(confirmar ? texto : null);
     };
     h.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") { ev.preventDefault(); terminar(true); }
+      if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); terminar(true); }
       else if (ev.key === "Escape") { ev.preventDefault(); terminar(false); }
       ev.stopPropagation();
     });
     h.addEventListener("blur", () => terminar(true));
   }
 
+  function editarTitulo(id, textoCrudo) {
+    editarTexto("s:" + id, textoCrudo, (texto) => F.Editor.titulo(id, texto ? texto.replace(/\s+/g, " ").trim() : null));
+  }
+
+  function editarBloque(sid, bid, textoCrudo) {
+    editarTexto("b:" + sid + ":" + bid, textoCrudo, (texto) => F.Editor.texto(sid, bid, texto));
+  }
+
   /* ---------- soltar encima de la hoja ----------
-     El nuevo elemento entra antes del primer titulo que queda debajo del cursor;
-     si no hay ninguno, al final del documento. */
-  function destinoSoltar(ev) {
+     Secciones: antes del primer titulo que queda debajo del cursor (o al final).
+     Bloques: antes del primer titulo o bloque que queda debajo del cursor; antes de un titulo
+     significa al final de la seccion anterior; sin nada debajo, al final de la ultima. */
+  function destinoSoltar(ev, arrastrado) {
+    return arrastrado.clase === "bloque" || (arrastrado.clase === "nuevo" && arrastrado.tipo !== "seccion")
+      ? destinoBloque(ev) : destinoSeccion(ev);
+  }
+
+  function destinoSeccion(ev) {
     const d = documento();
     const y = ev.clientY;
     const titulos = Array.from(d.querySelectorAll('[data-ref^="s:"]'));
@@ -125,6 +181,27 @@
       if (r.top + r.height / 2 >= y) return { zona: "antes", ref: h.dataset.ref.slice(2), elemento: h };
     }
     return { zona: "fin", ref: null, elemento: null };
+  }
+
+  function destinoBloque(ev) {
+    const d = documento();
+    const modelo = F.Editor.modelo();
+    const y = ev.clientY;
+    const candidatos = Array.from(d.querySelectorAll('[data-ref^="s:"],[data-ref^="b:"]'));
+    let previa = null;                    // seccion del ultimo elemento que quedo arriba
+    for (const e of candidatos) {
+      const ref = e.dataset.ref;
+      const r = e.getBoundingClientRect();
+      const esTitulo = ref.startsWith("s:");
+      if (r.top + r.height / 2 >= y) {
+        if (esTitulo) return previa ? { bloque: true, sid: previa, indice: null, elemento: e } : null;
+        const partes = ref.split(":");
+        const o = modelo.bloqueDe(partes[1], partes[2]);
+        return o ? { bloque: true, sid: partes[1], indice: o.indice, elemento: e } : null;
+      }
+      previa = esTitulo ? ref.slice(2) : ref.split(":")[1];
+    }
+    return previa ? { bloque: true, sid: previa, indice: null, elemento: null } : null;
   }
 
   function mostrarLinea(destino) {
@@ -161,6 +238,7 @@
     render: render,
     marcarSeleccion: marcarSeleccion,
     editarTitulo: editarTitulo,
+    editarBloque: editarBloque,
     ocultarLinea: ocultarLinea,
     enfocar: () => { if (marcoListo) ventana().focus(); },
   };

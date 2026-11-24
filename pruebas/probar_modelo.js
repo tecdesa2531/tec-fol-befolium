@@ -145,4 +145,48 @@ prueba("marcar anexo solo en el primer nivel", () => {
   assert.strictEqual(m.buscar("b").sec.anexo, undefined);
 });
 
+prueba("bloques: agregar, ids, mover entre secciones, duplicar y quitar", () => {
+  const m = new Modelo("general", doc());
+  const b2 = m.agregarBloque("a", null, "nota");
+  assert.strictEqual(b2, "b2");
+  const b3 = m.agregarBloque("a", 0, "etiqueta");
+  assert.strictEqual(b3, "b3");
+  assert.deepStrictEqual(m.buscar("a").sec.bloques.map((b) => b.id), ["b3", "b1", "b2"]);
+  m.moverBloque("a", "b2", "b", null);                       // a otra seccion, al final
+  assert.deepStrictEqual(m.buscar("b").sec.bloques.map((b) => b.id), ["b2"]);
+  m.moverBloque("a", "b1", "a", null);                       // mismo lugar, al final
+  assert.deepStrictEqual(m.buscar("a").sec.bloques.map((b) => b.id), ["b3", "b1"]);
+  m.moverBloque("a", "b1", "a", 0);                          // al principio
+  assert.deepStrictEqual(m.buscar("a").sec.bloques.map((b) => b.id), ["b1", "b3"]);
+  const copia = m.duplicarBloque("a", "b1");
+  assert.strictEqual(copia, "b4");
+  m.quitarBloque("a", "b4");
+  assert.deepStrictEqual(m.buscar("a").sec.bloques.map((b) => b.id), ["b1", "b3"]);
+  assert.throws(() => m.agregarBloque("a", null, "tabla"), /todavía/);
+});
+
+prueba("bloques: mover a una seccion con el mismo id le da uno nuevo", () => {
+  const m = new Modelo("general", doc());
+  m.agregarBloque("b", null, "parrafo");                      // b1 en la seccion b
+  m.moverBloque("a", "b1", "b", null);
+  const ids2 = m.buscar("b").sec.bloques.map((b) => b.id);
+  assert.strictEqual(new Set(ids2).size, 2);
+  assert.strictEqual(m.buscar("a").sec.bloques.length, 0);
+});
+
+prueba("bloques: texto, tipo y con_siguiente", () => {
+  const m = new Modelo("general", doc());
+  m.textoBloque("a", "b1", "nuevo texto");
+  m.tipoBloque("a", "b1", "etiqueta");
+  assert.strictEqual(m.bloqueDe("a", "b1").bloque.tipo, "etiqueta");
+  m.tipoBloque("a", "b1", "nota_destacada");
+  m.conSiguiente("a", "b1", true);
+  assert.strictEqual(m.bloqueDe("a", "b1").bloque.con_siguiente, true);
+  m.tipoBloque("a", "b1", "etiqueta");
+  assert.strictEqual(m.bloqueDe("a", "b1").bloque.con_siguiente, undefined);
+  for (let i = 0; i < 4; i++) m.deshacer();                  // quedan solo el texto nuevo
+  assert.strictEqual(m.bloqueDe("a", "b1").bloque.tipo, "parrafo");
+  assert.strictEqual(m.bloqueDe("a", "b1").bloque.texto, "nuevo texto");
+});
+
 console.log("\n" + pruebas + " pruebas del modelo correctas");

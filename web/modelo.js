@@ -5,6 +5,12 @@
 
   const MAX_NIVEL = 3;
   const MAX_HISTORIAL = 200;
+  const TEXTOS_NUEVOS = {
+    parrafo: "Nuevo párrafo",
+    nota: "Nueva nota",
+    nota_destacada: "Nueva nota destacada",
+    etiqueta: "Nueva etiqueta",
+  };
 
   function quitarTildes(texto) { return texto.normalize("NFD").replace(/[̀-ͯ]/g, ""); }
 
@@ -287,9 +293,106 @@
         if (valor) r.sec[campo] = true; else delete r.sec[campo];
       });
     }
+
+    /* ---------- bloques de texto ---------- */
+    bloqueDe(sid, bid) {
+      const r = this.buscar(sid);
+      if (!r) return null;
+      const bloques = r.sec.bloques || (r.sec.bloques = []);
+      const indice = bloques.findIndex((b) => b.id === bid);
+      return indice < 0 ? null : { sec: r.sec, bloques: bloques, indice: indice, bloque: bloques[indice] };
+    }
+
+    idBloqueNuevo(sec, reservados) {
+      const usados = new Set((sec.bloques || []).map((b) => b.id));
+      if (reservados) reservados.forEach((i) => usados.add(i));
+      let n = 1;
+      (sec.bloques || []).forEach((b) => { const m = /^b(\d+)$/.exec(b.id); if (m) n = Math.max(n, Number(m[1]) + 1); });
+      while (usados.has("b" + n)) n++;
+      return "b" + n;
+    }
+
+    /* indice null: al final de los bloques de la seccion. Devuelve el id del bloque. */
+    agregarBloque(sid, indice, tipo) {
+      if (!TEXTOS_NUEVOS[tipo]) throw new Error("Ese tipo de bloque todavía no se puede agregar.");
+      let nuevoId = null;
+      this.cambiar(() => {
+        const r = this.buscar(sid);
+        if (!r) throw new Error("No se encontró la sección de destino.");
+        if (!r.sec.bloques) r.sec.bloques = [];
+        nuevoId = this.idBloqueNuevo(r.sec);
+        const i = indice === null || indice === undefined ? r.sec.bloques.length : indice;
+        r.sec.bloques.splice(i, 0, { tipo: tipo, id: nuevoId, texto: TEXTOS_NUEVOS[tipo] });
+      });
+      return nuevoId;
+    }
+
+    /* Devuelve el id del bloque despues de moverlo (cambia solo si choca con otro del destino). */
+    moverBloque(sid, bid, sidDestino, indice) {
+      let idFinal = bid;
+      this.cambiar(() => {
+        const o = this.bloqueDe(sid, bid);
+        const d = this.buscar(sidDestino);
+        if (!o || !d) throw new Error("No se encontró el bloque o su destino.");
+        if (!d.sec.bloques) d.sec.bloques = [];
+        let i = indice === null || indice === undefined ? d.sec.bloques.length : indice;
+        if (o.bloques === d.sec.bloques && o.indice < i) i--;      // al quitarlo, los de abajo suben
+        o.bloques.splice(o.indice, 1);
+        if (d.sec.bloques.some((b) => b.id === o.bloque.id)) o.bloque.id = this.idBloqueNuevo(d.sec);
+        idFinal = o.bloque.id;
+        d.sec.bloques.splice(i, 0, o.bloque);
+      });
+      return idFinal;
+    }
+
+    quitarBloque(sid, bid) {
+      return this.cambiar(() => {
+        const o = this.bloqueDe(sid, bid);
+        if (!o) throw new Error("No se encontró el bloque.");
+        o.bloques.splice(o.indice, 1);
+      });
+    }
+
+    duplicarBloque(sid, bid) {
+      let nuevoId = null;
+      this.cambiar(() => {
+        const o = this.bloqueDe(sid, bid);
+        const copia = JSON.parse(JSON.stringify(o.bloque));
+        copia.id = this.idBloqueNuevo(o.sec);
+        (copia.filas || []).forEach((f, i) => { f.id = "f" + (i + 1); });
+        o.bloques.splice(o.indice + 1, 0, copia);
+        nuevoId = copia.id;
+      });
+      return nuevoId;
+    }
+
+    textoBloque(sid, bid, texto) {
+      return this.cambiar(() => {
+        const o = this.bloqueDe(sid, bid);
+        if (!o || typeof o.bloque.texto !== "string") throw new Error("Este bloque no tiene texto.");
+        o.bloque.texto = texto;
+      });
+    }
+
+    /* Cambia entre los tipos de texto (parrafo, nota, nota destacada y etiqueta). */
+    tipoBloque(sid, bid, tipo) {
+      return this.cambiar(() => {
+        const o = this.bloqueDe(sid, bid);
+        if (!TEXTOS_NUEVOS[tipo] || typeof o.bloque.texto !== "string") throw new Error("No se puede cambiar a ese tipo.");
+        o.bloque.tipo = tipo;
+        if (tipo === "etiqueta") delete o.bloque.con_siguiente;     // las etiquetas siempre van con el siguiente
+      });
+    }
+
+    conSiguiente(sid, bid, valor) {
+      return this.cambiar(() => {
+        const o = this.bloqueDe(sid, bid);
+        if (valor) o.bloque.con_siguiente = true; else delete o.bloque.con_siguiente;
+      });
+    }
   }
 
-  const api = { Modelo: Modelo, slug: slug, MAX_NIVEL: MAX_NIVEL };
+  const api = { Modelo: Modelo, slug: slug, MAX_NIVEL: MAX_NIVEL, TEXTOS_NUEVOS: TEXTOS_NUEVOS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else (raiz.Folium = raiz.Folium || {}).Modelo = Modelo, raiz.Folium.slug = slug;
 })(typeof window !== "undefined" ? window : globalThis);

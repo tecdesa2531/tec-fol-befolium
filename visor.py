@@ -196,8 +196,11 @@ html,body{background:#F0F1F5}
 .f-sel{outline:2px solid #0070C0;outline-offset:3px}
 .f-editando{outline:2px solid #0070C0;outline-offset:3px;background:#E8F2FA;cursor:text}
 .f-linea{position:absolute;height:3px;background:#0070C0;border-radius:2px;pointer-events:none;z-index:50}
+.f-asa{position:absolute;width:20px;height:26px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1px solid #D0D4DC;border-radius:6px;color:#667085;font:12px/1 system-ui,sans-serif;
+  cursor:grab;user-select:none;z-index:40;box-shadow:0 1px 3px rgba(20,30,50,.15)}
 }
-@media print{.f-linea{display:none!important}}
+@media print{.f-linea,.f-asa{display:none!important}}
 </style>
 """ 
 

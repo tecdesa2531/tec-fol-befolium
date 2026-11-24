@@ -3,15 +3,16 @@
   "use strict";
 
   const el = F.el;
-  const TIPO_NUEVO = "application/x-folium-nuevo";
+  const PREFIJO_NUEVO = "application/x-folium-nuevo-";      // + tipo de bloque (o "seccion")
   const TIPO_SECCION = "application/x-folium-seccion";
+  const TIPO_BLOQUE = "application/x-folium-bloque";        // dato: "<seccion>:<bloque>"
 
   const PALETA = [
     ["seccion", "Sección", true],
-    ["parrafo", "Párrafo", false],
-    ["nota", "Nota", false],
-    ["nota_destacada", "Nota destacada", false],
-    ["etiqueta", "Etiqueta", false],
+    ["parrafo", "Párrafo", true],
+    ["nota", "Nota", true],
+    ["nota_destacada", "Nota destacada", true],
+    ["etiqueta", "Etiqueta", true],
     ["tabla", "Tabla", false],
     ["imagen", "Imagen", false],
   ];
@@ -48,8 +49,10 @@
 
   function fila(modelo, sec, num, nivel) {
     const li = el("li");
-    const seleccionada = F.Editor.seleccion && F.Editor.seleccion.tipo === "seccion" && F.Editor.seleccion.id === sec.id;
-    const f = el("div", { class: "fila nivel" + nivel + (seleccionada ? " sel" : ""), draggable: "true", "data-id": sec.id });
+    const s = F.Editor.seleccion;
+    const seleccionada = s && s.tipo === "seccion" && s.id === sec.id;
+    const contiene = s && s.tipo === "bloque" && s.sid === sec.id;          // contiene el bloque seleccionado
+    const f = el("div", { class: "fila nivel" + nivel + (seleccionada ? " sel" : "") + (contiene ? " sel-padre" : ""), draggable: "true", "data-id": sec.id });
     f.appendChild(el("span", { class: "n", texto: num[sec.id] || "" }));
     f.appendChild(el("span", { class: "t", texto: sec.titulo }));
     const mas = el("button", { type: "button", class: "mas", "aria-label": "Acciones de la sección", texto: "⋯" });
@@ -63,26 +66,31 @@
       ev.dataTransfer.effectAllowed = "move";
     });
     f.addEventListener("dragover", (ev) => {
-      const tipo = F.Editor.tipoArrastrado(ev.dataTransfer);
-      if (!tipo) return;
+      const arrastrado = F.Editor.tipoArrastrado(ev.dataTransfer);
+      if (!arrastrado) return;
+      limpiarMarcas();
+      if (F.Editor.esBloque(arrastrado)) {              // un bloque se agrega al final de la seccion
+        ev.preventDefault();
+        f.classList.add("dz-dentro");
+        return;
+      }
       const zona = zonaDe(ev, f);
       const origen = F.Editor.origenArrastrado;       // id al arrastrar una seccion existente
       const m = F.Editor.modelo();
-      const motivo = tipo === "seccion" ? m.motivoNoMover(origen, sec.id, zona) : m.motivoNoAgregar(sec.id, zona);
-      limpiarMarcas();
+      const motivo = arrastrado.clase === "seccion" ? m.motivoNoMover(origen, sec.id, zona) : m.motivoNoAgregar(sec.id, zona);
       if (motivo) { f.classList.add("dz-no"); return; }
       ev.preventDefault();
       f.classList.add("dz-" + zona);
     });
     f.addEventListener("dragleave", () => f.classList.remove("dz-antes", "dz-despues", "dz-dentro", "dz-no"));
     f.addEventListener("drop", (ev) => {
-      const tipo = F.Editor.tipoArrastrado(ev.dataTransfer);
-      if (!tipo) return;
+      const arrastrado = F.Editor.tipoArrastrado(ev.dataTransfer);
+      if (!arrastrado) return;
       ev.preventDefault();
       ev.stopPropagation();
-      const zona = zonaDe(ev, f);
+      const zona = F.Editor.esBloque(arrastrado) ? "dentro" : zonaDe(ev, f);
       limpiarMarcas();
-      F.Editor.alSoltar(tipo, ev.dataTransfer, { zona: zona, ref: sec.id });
+      F.Editor.alSoltar(arrastrado, ev.dataTransfer, { zona: zona, ref: sec.id });
     });
     li.appendChild(f);
 
@@ -143,13 +151,14 @@
     cont.textContent = "";
     PALETA.forEach(([tipo, texto, activo]) => {
       const e = el("div", { class: "pieza" + (activo ? "" : " pronto"), draggable: activo ? "true" : "false",
-                            title: activo ? "Arrástrala a la hoja o a la estructura" : "Disponible en el siguiente paso" });
+                            title: activo ? "Arrástrala a la hoja o a la estructura, o haz doble clic para insertarla" : "Disponible en el siguiente paso" });
       e.textContent = texto;
       if (activo) {
         e.addEventListener("dragstart", (ev) => {
-          ev.dataTransfer.setData(TIPO_NUEVO, tipo);
+          ev.dataTransfer.setData(PREFIJO_NUEVO + tipo, tipo);
           ev.dataTransfer.effectAllowed = "copy";
         });
+        e.addEventListener("dblclick", () => F.Editor.insertar(tipo));
       }
       cont.appendChild(e);
     });
@@ -160,15 +169,15 @@
     const cont = document.getElementById("arbol");
     cont.addEventListener("dragover", (ev) => {
       if (ev.target !== cont && ev.target.closest(".fila")) return;
-      const tipo = F.Editor.tipoArrastrado(ev.dataTransfer);
-      if (tipo) { ev.preventDefault(); limpiarMarcas(); }
+      const arrastrado = F.Editor.tipoArrastrado(ev.dataTransfer);
+      if (arrastrado && !F.Editor.esBloque(arrastrado)) { ev.preventDefault(); limpiarMarcas(); }
     });
     cont.addEventListener("drop", (ev) => {
       if (ev.target.closest(".fila")) return;
-      const tipo = F.Editor.tipoArrastrado(ev.dataTransfer);
-      if (!tipo) return;
+      const arrastrado = F.Editor.tipoArrastrado(ev.dataTransfer);
+      if (!arrastrado || F.Editor.esBloque(arrastrado)) return;
       ev.preventDefault();
-      F.Editor.alSoltar(tipo, ev.dataTransfer, { zona: "fin", ref: null });
+      F.Editor.alSoltar(arrastrado, ev.dataTransfer, { zona: "fin", ref: null });
     });
     document.addEventListener("click", cerrarMenu);
     document.addEventListener("dragend", () => { limpiarMarcas(); F.Hoja.ocultarLinea(); F.Editor.origenArrastrado = null; });
@@ -178,5 +187,5 @@
     pintarPaleta();
   }
 
-  F.Arbol = { pintar: pintar, instalar: instalar, TIPO_NUEVO: TIPO_NUEVO, TIPO_SECCION: TIPO_SECCION };
+  F.Arbol = { pintar: pintar, instalar: instalar, PREFIJO_NUEVO: PREFIJO_NUEVO, TIPO_SECCION: TIPO_SECCION, TIPO_BLOQUE: TIPO_BLOQUE };
 })(window.Folium = window.Folium || {});

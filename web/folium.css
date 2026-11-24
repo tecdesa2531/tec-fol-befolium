@@ -136,6 +136,7 @@ button.peligro{color:var(--error);border-color:#E6B8B4}
 #arbol .fila{position:relative;display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;cursor:pointer;border-top:2px solid transparent;border-bottom:2px solid transparent}
 #arbol .fila:hover{background:var(--fondo)}
 #arbol .fila.sel{background:var(--azul-claro)}
+#arbol .fila.sel-padre{box-shadow:inset 3px 0 0 var(--azul)}
 #arbol .fila .n{flex:none;min-width:16px;color:var(--suave);font-size:12px}
 #arbol .fila .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #arbol .fila .mas{border:0;background:none;padding:0 6px;color:var(--suave);visibility:hidden}
@@ -155,7 +156,7 @@ button.peligro{color:var(--error);border-color:#E6B8B4}
 
 #props .campo{margin-bottom:12px}
 #props .campo>label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:4px}
-#props input[type="text"]{width:100%;padding:6px 8px;font:inherit;border:1px solid var(--linea-fuerte);border-radius:6px}
+#props input[type="text"],#props textarea,#props select{width:100%;padding:6px 8px;font:inherit;border:1px solid var(--linea-fuerte);border-radius:6px}
 #props label.casilla{display:flex;align-items:center;gap:6px;margin:6px 0;font-size:13px}
 
 
