@@ -25,8 +25,12 @@ class Manejador(BaseHTTPRequestHandler):
         if ruta == "/index.html":
             ruta = "/"
         archivo = RUTAS.get(ruta)
-        if archivo is None or not archivo.is_file():
+        if archivo is None:
             self.responder(404, b"No encontrado", "text/plain; charset=utf-8")
+            return
+        if not archivo.is_file():
+            msg = "Falta el archivo %s. Copialo ahi a mano: referencia/ no se sube a git." % archivo.name
+            self.responder(404, msg.encode("utf-8"), "text/plain; charset=utf-8")
             return
         self.responder(200, archivo.read_bytes(), "text/html; charset=utf-8")
 
