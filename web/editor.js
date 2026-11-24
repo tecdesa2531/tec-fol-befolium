@@ -289,6 +289,28 @@
   /* Aplica un cambio del modelo con aviso de errores; la seleccion se conserva. */
   E.conSeleccion = function (fn) { return intentar(fn); };
 
+  /* Selecciona la tabla si lo seleccionado no es ya parte de ella (sus anchos se ven en el panel). */
+  function seleccionarTabla(sid, bid) {
+    const s = E.seleccion;
+    if (s && s.sid === sid && s.bid === bid && (s.tipo === "bloque" || s.tipo === "columna")) return;
+    E.seleccionar({ tipo: "bloque", sid: sid, bid: bid });
+  }
+
+  /* Clic en una barra + de la hoja: agrega una fila o una columna segun el orden de la tabla. */
+  E.agregarDesdeBarra = function (tipo, sid, bid) {
+    const m = E.modelo();
+    const hecho = intentar(() => (tipo === "fila" ? m.agregarFila(sid, bid, null) : m.agregarColumna(sid, bid, null)));
+    if (hecho) seleccionarTabla(sid, bid);
+  };
+
+  /* Fin del arrastre del borde entre columnas: la columna cid pasa a medir ancho mm. */
+  E.redimensionar = function (sid, bid, cid, ancho) {
+    const m = E.modelo();
+    const cambio = intentar(() => m.redimensionarColumna(sid, bid, cid, ancho));
+    if (cambio) seleccionarTabla(sid, bid);
+    else F.Hoja.render(m);          // sin cambio: la hoja vuelve a los anchos guardados
+  };
+
   E.deshacer = function () { const m = E.modelo(); if (m) m.deshacer(); };
   E.rehacer = function () { const m = E.modelo(); if (m) m.rehacer(); };
 

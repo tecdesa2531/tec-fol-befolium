@@ -169,10 +169,13 @@
                 }
               ],
               "filas": [],
-              "nuevas_filas": "arriba"
+              "nuevas_filas": "arriba",
+              "siguiente_fila": 1,
+              "siguiente_columna": 5
             }
           ],
-          "secciones": []
+          "secciones": [],
+          "siguiente_bloque": 2
         },
         {
           "id": "om-usuarios",
@@ -226,10 +229,13 @@
                   "tipo": "estado"
                 }
               ],
-              "filas": []
+              "filas": [],
+              "siguiente_fila": 1,
+              "siguiente_columna": 7
             }
           ],
-          "secciones": []
+          "secciones": [],
+          "siguiente_bloque": 2
         },
         {
           "id": "om-credenciales",
@@ -277,10 +283,13 @@
                   "tipo": "estado"
                 }
               ],
-              "filas": []
+              "filas": [],
+              "siguiente_fila": 1,
+              "siguiente_columna": 6
             }
           ],
-          "secciones": []
+          "secciones": [],
+          "siguiente_bloque": 2
         },
         {
           "id": "om-entregas",
@@ -323,10 +332,13 @@
                 }
               ],
               "filas": [],
-              "nuevas_filas": "abajo"
+              "nuevas_filas": "abajo",
+              "siguiente_fila": 1,
+              "siguiente_columna": 5
             }
           ],
-          "secciones": []
+          "secciones": [],
+          "siguiente_bloque": 2
         },
         {
           "id": "om-secretos",
@@ -375,10 +387,13 @@
                 }
               ],
               "filas": [],
-              "nuevas_filas": "abajo"
+              "nuevas_filas": "abajo",
+              "siguiente_fila": 1,
+              "siguiente_columna": 6
             }
           ],
-          "secciones": []
+          "secciones": [],
+          "siguiente_bloque": 2
         }
       ]
     },

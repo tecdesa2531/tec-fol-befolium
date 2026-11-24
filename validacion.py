@@ -41,6 +41,11 @@ def texto_de(celda):
     return "" if celda is None else str(celda)
 
 
+def primera_linea(texto):
+    """Para el color y la validacion de estado cuenta solo la primera linea de la celda."""
+    return texto.split("\n", 1)[0]
+
+
 def color_de_estado(texto, estados):
     """Color que corresponde a un texto de estado, o None si no esta permitido."""
     t = texto.strip()
@@ -91,6 +96,19 @@ def validar(doc):
         if e.get("color") not in COLORES:
             error("estados", "Color no permitido en '%s'" % e.get("texto"))
 
+    def contador(dueno, campo, elementos, prefijo, donde):
+        """El contador solo sube: debe ser mayor que el numero de cualquier id existente."""
+        if campo not in dueno:
+            return
+        valor = dueno[campo]
+        mayor = 0
+        for e in elementos:
+            m = re.fullmatch(prefijo + r"(\d+)", str(e.get("id", "")))
+            if m:
+                mayor = max(mayor, int(m.group(1)))
+        if isinstance(valor, bool) or not isinstance(valor, int) or valor <= mayor:
+            error(donde, "%s debe ser un entero mayor que %d" % (campo, mayor))
+
     retirados = set(doc.get("ids_retirados", []))
     ids = {}
     enlaces = []
@@ -113,6 +131,7 @@ def validar(doc):
                 error(donde, "Máximo 3 niveles de secciones")
             if s.get("anexo") and nivel != 1:
                 error(donde, "Solo el nivel 1 puede ser anexo")
+            contador(s, "siguiente_bloque", s.get("bloques", []), "b", donde)
             validar_bloques(s.get("bloques", []), donde)
             recorrer(s.get("secciones", []), nivel + 1, donde)
 
@@ -166,6 +185,8 @@ def validar(doc):
                 error(donde, "Las columnas suman %g mm (deben sumar 150)" % suma)
         except (KeyError, TypeError, ValueError):
             error(donde, "Cada columna necesita ancho_mm numérico")
+        contador(t, "siguiente_columna", columnas, "c", donde)
+        contador(t, "siguiente_fila", t.get("filas", []), "f", donde)
         fvistos = set()
         for f in t.get("filas", []):
             fid = f.get("id", "")
@@ -178,20 +199,23 @@ def validar(doc):
                     error("%s/%s" % (donde, fid), "Celda de una columna que no existe: %s" % cid)
             for c in columnas:
                 celda = celdas.get(c.get("id"))
+                donde_celda = "%s/%s" % (donde, fid)
+                tipo = c.get("tipo")
                 if isinstance(celda, dict):
                     if celda.get("color") not in (None,) + COLORES:
-                        error("%s/%s" % (donde, fid), "Color de celda no permitido")
-                    if celda.get("estilo") not in (None, "texto", "identificador"):
-                        error("%s/%s" % (donde, fid), "estilo debe ser texto o identificador")
-                    for linea in celda.get("lineas", []):
-                        textos.append(("%s/%s" % (donde, fid), linea))
+                        error(donde_celda, "Color de celda no permitido")
+                    if celda.get("tipo") not in (None,) + TIPOS_COLUMNA:
+                        error(donde_celda, "El tipo de la celda debe ser texto, identificador o estado")
+                    if "estilo" in celda or "lineas" in celda:
+                        error(donde_celda, "Formato anterior de celda: usa tipo y saltos de línea en el texto")
+                    tipo = celda.get("tipo") or tipo
                 texto = texto_de(celda)
-                textos.append(("%s/%s" % (donde, fid), texto))
-                if c.get("tipo") == "estado" and texto.strip():
+                textos.append((donde_celda, texto))
+                estado = primera_linea(texto).strip()
+                if tipo == "estado" and estado:
                     fijo = isinstance(celda, dict) and celda.get("color")
-                    if not fijo and color_de_estado(texto, estados) is None:
-                        error("%s/%s" % (donde, fid),
-                              "Estado '%s' no está en la lista" % texto.strip())
+                    if not fijo and color_de_estado(estado, estados) is None:
+                        error(donde_celda, "Estado '%s' no está en la lista" % estado)
 
     recorrer(doc.get("secciones", []), 1, "")
 

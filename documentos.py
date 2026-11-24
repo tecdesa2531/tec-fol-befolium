@@ -4,6 +4,8 @@ import os
 import re
 from pathlib import Path
 
+from migracion import migrar
+
 DOCUMENTOS = ("general", "repositorio", "compartidos")
 
 
@@ -21,7 +23,7 @@ def cargar_documento(ruta):
     if not ruta.is_file():
         return None
     try:
-        return json.loads(ruta.read_text(encoding="utf-8"))
+        return migrar(json.loads(ruta.read_text(encoding="utf-8")))
     except json.JSONDecodeError as e:
         raise ValueError("%s: JSON mal formado (línea %d, columna %d): %s"
                          % (ruta.name, e.lineno, e.colno, e.msg))

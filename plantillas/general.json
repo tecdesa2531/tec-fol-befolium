@@ -133,12 +133,7 @@
             {
               "id": "f1",
               "celdas": {
-                "c0": {
-                  "texto": "Repositorio de la aplicación",
-                  "lineas": [
-                    "`{{pdf_repositorio}}`"
-                  ]
-                },
+                "c0": "Repositorio de la aplicación\n`{{pdf_repositorio}}`",
                 "c1": "Recursos del repositorio de la aplicación y qué trajo cada entrega",
                 "c2": "{{version_repositorio}}"
               }
@@ -146,17 +141,14 @@
             {
               "id": "f2",
               "celdas": {
-                "c0": {
-                  "texto": "Compartidos y manuales",
-                  "lineas": [
-                    "`{{pdf_compartidos}}`"
-                  ]
-                },
+                "c0": "Compartidos y manuales\n`{{pdf_compartidos}}`",
                 "c1": "Recursos en repositorios compartidos y operaciones manuales",
                 "c2": "{{version_compartidos}}"
               }
             }
-          ]
+          ],
+          "siguiente_fila": 3,
+          "siguiente_columna": 3
         }
       ],
       "secciones": [
@@ -194,12 +186,16 @@
                   "tipo": "identificador"
                 }
               ],
-              "filas": []
+              "filas": [],
+              "siguiente_fila": 1,
+              "siguiente_columna": 4
             }
           ],
-          "secciones": []
+          "secciones": [],
+          "siguiente_bloque": 2
         }
-      ]
+      ],
+      "siguiente_bloque": 3
     },
     {
       "id": "arquitectura",

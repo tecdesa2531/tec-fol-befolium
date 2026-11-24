@@ -9,6 +9,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
 import documentos
+import migracion
 import validacion
 import visor
 
@@ -93,7 +94,7 @@ class PruebasVisor(unittest.TestCase):
         self.assertIn('<td class="pend">', h)      # amarillo
         self.assertIn('<td class="na">', h)        # gris
         self.assertIn("<code>demo-rol-lectura</code>", h)
-        self.assertIn('<span class="sub">01/01/2026</span>', h)
+        self.assertIn("<code>0.1.0</code><br>01/01/2026", h)      # segunda linea en el mismo texto
         self.assertIn('class="diag"', h)
         self.assertIn("Borrador", h)
         self.assertNotIn("Rol de lectura de reportes</code>", h)   # estilo texto en columna identificador
@@ -108,6 +109,77 @@ class PruebasVisor(unittest.TestCase):
         h = visor.generar_html(cargar("repositorio"))
         self.assertNotIn("http://", h)
         self.assertNotIn("https://", h)
+
+
+class PruebasCeldasYContadores(unittest.TestCase):
+    def tabla(self, doc):
+        return doc["secciones"][0]["bloques"][0]
+
+    def doc_con_tabla(self, columnas, celdas):
+        doc = cargar("general")
+        doc["secciones"] = [{"id": "s", "titulo": "S", "bloques": [
+            {"tipo": "tabla", "id": "b1", "clase": "estado", "columnas": columnas,
+             "filas": [{"id": "f1", "celdas": celdas}]}], "secciones": []}]
+        return doc
+
+    COLS = [{"id": "c1", "titulo": "A", "ancho_mm": 75, "tipo": "texto"},
+            {"id": "c2", "titulo": "B", "ancho_mm": 75, "tipo": "estado"}]
+
+    def test_migra_estilo_y_lineas(self):
+        doc = self.doc_con_tabla(
+            [{"id": "c1", "titulo": "A", "ancho_mm": 75, "tipo": "identificador"},
+             {"id": "c2", "titulo": "B", "ancho_mm": 75, "tipo": "texto"}],
+            {"c1": {"texto": "demo-x", "lineas": ["01/01/2026"]},
+             "c2": {"texto": "Hola", "lineas": ["otra", ""], "estilo": "identificador"}})
+        migracion.migrar(doc)
+        celdas = self.tabla(doc)["filas"][0]["celdas"]
+        self.assertEqual(celdas["c1"], "`demo-x`\n01/01/2026")            # la primera linea seguia en Consolas
+        self.assertEqual(celdas["c2"], {"texto": "`Hola`\notra", "tipo": "identificador"})
+        self.assertNotIn("lineas", str(doc))
+        self.assertNotIn("estilo", str(doc))
+        copia = copy.deepcopy(doc)
+        self.assertEqual(migracion.migrar(doc), copia)                      # migrar dos veces no cambia nada
+
+    def test_migra_contadores_al_maximo(self):
+        doc = self.doc_con_tabla(self.COLS, {})
+        doc["secciones"][0]["bloques"][0]["filas"] = [{"id": "f2", "celdas": {}}, {"id": "f7", "celdas": {}}]
+        migracion.migrar(doc)
+        self.assertEqual(self.tabla(doc)["siguiente_fila"], 8)
+        self.assertEqual(self.tabla(doc)["siguiente_columna"], 3)
+        self.assertEqual(doc["secciones"][0]["siguiente_bloque"], 2)
+
+    def test_validacion_de_contadores(self):
+        doc = self.doc_con_tabla(self.COLS, {})
+        migracion.migrar(doc)
+        self.assertEqual(errores(doc), [])
+        self.tabla(doc)["siguiente_fila"] = 1                               # no puede quedar por debajo de f1
+        self.assertTrue(any("siguiente_fila" in e for e in errores(doc)))
+
+    def test_celda_estado_en_columna_de_texto(self):
+        doc = self.doc_con_tabla(self.COLS, {"c1": {"texto": "En uso\n22/11/2026", "tipo": "estado"}, "c2": "En uso"})
+        migracion.migrar(doc)
+        self.assertEqual(errores(doc), [])                                  # cuenta la primera linea
+        h = visor.generar_html(doc)
+        self.assertIn("22/11/2026", h)
+        self.assertIn("En uso<br>22/11/2026", h)
+        doc["secciones"][0]["bloques"][0]["filas"][0]["celdas"]["c1"] = {"texto": "Nada\nmas", "tipo": "estado"}
+        self.assertTrue(any("Estado 'Nada'" in e for e in errores(doc)))
+
+    def test_celda_de_texto_en_columna_de_estado(self):
+        doc = self.doc_con_tabla(self.COLS, {"c2": {"texto": "cualquier cosa", "tipo": "texto"}})
+        migracion.migrar(doc)
+        self.assertEqual(errores(doc), [])                                  # ya no se valida como estado
+        self.assertNotIn('class="pend"', visor.generar_html(doc))
+
+    def test_color_automatico_con_primera_linea(self):
+        est = [{"texto": "Pendiente", "color": "amarillo"}]
+        doc = self.doc_con_tabla(self.COLS, {"c2": "Pendiente\nen proceso"})
+        doc["estados"] = est
+        self.assertIn('<td class="pend"', visor.generar_html(doc))
+
+    def test_el_formato_anterior_da_error(self):
+        doc = self.doc_con_tabla(self.COLS, {"c1": {"texto": "x", "lineas": ["y"]}})
+        self.assertTrue(any("Formato anterior" in e for e in errores(doc)))
 
 
 class PruebasCss(unittest.TestCase):

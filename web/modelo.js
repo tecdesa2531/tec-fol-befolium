@@ -5,6 +5,7 @@
 
   const MAX_NIVEL = 3;
   const MAX_HISTORIAL = 200;
+  const ANCHO_MINIMO = 5;
   const TEXTOS_NUEVOS = {
     parrafo: "Nuevo párrafo",
     nota: "Nueva nota",
@@ -125,14 +126,46 @@
       return m;
     }
 
-    idUnico(base, excepto, reservados) {
+    /* Ids de las secciones desde la raiz hasta la indicada (incluida). */
+    rutaDe(id, lista, previa) {
+      lista = lista || this.doc.secciones;
+      previa = previa || [];
+      for (const s of lista) {
+        if (s.id === id) return previa.concat([id]);
+        const r = this.rutaDe(id, s.secciones || [], previa.concat([s.id]));
+        if (r) return r;
+      }
+      return null;
+    }
+
+    /* Ancestros de una seccion, del padre hacia arriba. */
+    ancestrosDe(id) {
+      const r = this.rutaDe(id);
+      return r ? r.slice(0, -1).reverse() : [];
+    }
+
+    /* Ancestros de una seccion nueva segun donde se inserta (ver ubicar). */
+    ancestrosDestino(refId, zona) {
+      if (!refId) return [];
+      return zona === "dentro" ? [refId].concat(this.ancestrosDe(refId)) : this.ancestrosDe(refId);
+    }
+
+    /* Id libre a partir de un titulo. Si choca se antepone el id del padre (cuenta-eks-rol-iam),
+       luego tambien el del abuelo y, como ultimo recurso, un sufijo numerico.
+       ancestros: ids del padre hacia arriba. */
+    idUnico(base, excepto, reservados, ancestros) {
       const usados = this.todosIds();
       if (reservados) reservados.forEach((i) => usados.add(i));
       if (excepto) usados.delete(excepto);
       if (!usados.has(base)) return base;
+      let candidato = base;
+      for (const a of (ancestros || [])) {
+        candidato = a + "-" + candidato;
+        if (!usados.has(candidato)) return candidato;
+      }
       let n = 2;
-      while (usados.has(base + "-" + n)) n++;
-      return base + "-" + n;
+      while (usados.has(candidato + "-" + n)) n++;
+      return candidato + "-" + n;
     }
 
     /* ---------- reglas de posicion ----------
@@ -183,7 +216,7 @@
         const motivo = this.motivoNoAgregar(refId, zona);
         if (motivo) throw new Error(motivo);
         const d = this.ubicar(refId, zona);
-        nuevoId = this.idUnico(slug(titulo));
+        nuevoId = this.idUnico(slug(titulo), null, null, this.ancestrosDestino(refId, zona));
         d.lista.splice(d.indice, 0, { id: nuevoId, titulo: titulo, bloques: [], secciones: [] });
       });
       return nuevoId;
@@ -210,7 +243,7 @@
         const r = this.buscar(id);
         r.sec.titulo = titulo;
         if (!this.esFijo(id)) {
-          const nuevo = this.idUnico(slug(titulo), id);
+          const nuevo = this.idUnico(slug(titulo), id, null, this.ancestrosDe(id));
           if (nuevo !== id) {
             r.sec.id = nuevo;
             this.reescribirEnlaces(this.doc, id, nuevo);
@@ -303,13 +336,10 @@
       return indice < 0 ? null : { sec: r.sec, bloques: bloques, indice: indice, bloque: bloques[indice] };
     }
 
+    /* Siguiente id de bloque. El contador de la seccion (siguiente_bloque) solo sube: un id
+       que se borro no vuelve a usarse. */
     idBloqueNuevo(sec, reservados) {
-      const usados = new Set((sec.bloques || []).map((b) => b.id));
-      if (reservados) reservados.forEach((i) => usados.add(i));
-      let n = 1;
-      (sec.bloques || []).forEach((b) => { const m = /^b(\d+)$/.exec(b.id); if (m) n = Math.max(n, Number(m[1]) + 1); });
-      while (usados.has("b" + n)) n++;
-      return "b" + n;
+      return this.siguienteId(sec, "siguiente_bloque", "b", sec.bloques || [], reservados);
     }
 
     /* indice null: al final de los bloques de la seccion. Devuelve el id del bloque. */
@@ -339,6 +369,7 @@
         if (o.bloques === d.sec.bloques && o.indice < i) i--;      // al quitarlo, los de abajo suben
         o.bloques.splice(o.indice, 1);
         if (d.sec.bloques.some((b) => b.id === o.bloque.id)) o.bloque.id = this.idBloqueNuevo(d.sec);
+        else this.subirContador(d.sec, "siguiente_bloque", "b", o.bloque.id);
         idFinal = o.bloque.id;
         d.sec.bloques.splice(i, 0, o.bloque);
       });
@@ -359,7 +390,10 @@
         const o = this.bloqueDe(sid, bid);
         const copia = JSON.parse(JSON.stringify(o.bloque));
         copia.id = this.idBloqueNuevo(o.sec);
-        (copia.filas || []).forEach((f, i) => { f.id = "f" + (i + 1); });
+        if (copia.filas) {
+          copia.filas.forEach((f, i) => { f.id = "f" + (i + 1); });
+          copia.siguiente_fila = copia.filas.length + 1;
+        }
         o.bloques.splice(o.indice + 1, 0, copia);
         nuevoId = copia.id;
       });
@@ -398,12 +432,22 @@
       return o.bloque;
     }
 
-    siguienteId(prefijo, lista) {
+    /* Id nuevo con prefijo (b, f o c) y numero que solo sube: el contador vive en el dueno
+       (seccion o tabla) bajo el nombre `campo`. Sin contador, empieza en el maximo actual + 1. */
+    siguienteId(dueno, campo, prefijo, lista, reservados) {
       const usados = new Set(lista.map((x) => x.id));
-      let n = 1;
+      if (reservados) reservados.forEach((i) => usados.add(i));
+      let n = Number.isInteger(dueno[campo]) && dueno[campo] > 0 ? dueno[campo] : 1;
       lista.forEach((x) => { const m = new RegExp("^" + prefijo + "(\\d+)$").exec(x.id); if (m) n = Math.max(n, Number(m[1]) + 1); });
       while (usados.has(prefijo + n)) n++;
+      dueno[campo] = n + 1;
       return prefijo + n;
+    }
+
+    /* Un id que llega de fuera (un bloque movido) tambien sube el contador del destino. */
+    subirContador(dueno, campo, prefijo, id) {
+      const m = new RegExp("^" + prefijo + "(\\d+)$").exec(id);
+      if (m && !(dueno[campo] > Number(m[1]))) dueno[campo] = Number(m[1]) + 1;
     }
 
     /* Reparte los anchos en proporcion para que sumen 150 mm (a medio milimetro). */
@@ -433,7 +477,7 @@
         r.sec.bloques.splice(i, 0, {
           tipo: "tabla", id: nuevoId, clase: "estado",
           columnas: [1, 2, 3].map((n) => ({ id: "c" + n, titulo: "Columna " + n, ancho_mm: 50, tipo: "texto" })),
-          filas: [{ id: "f1", celdas: {} }] });
+          filas: [{ id: "f1", celdas: {} }], siguiente_fila: 2, siguiente_columna: 4 });
       });
       return nuevoId;
     }
@@ -466,7 +510,7 @@
       let nuevoId = null;
       this.cambiar(() => {
         const t = this.tablaDe(sid, bid);
-        nuevoId = this.siguienteId("c", t.columnas);
+        nuevoId = this.siguienteId(t, "siguiente_columna", "c", t.columnas);
         const i = indice === null || indice === undefined ? t.columnas.length : indice;
         t.columnas.splice(i, 0, { id: nuevoId, titulo: "Columna " + (t.columnas.length + 1), ancho_mm: 20, tipo: "texto" });
         this.repartirAnchos(t.columnas);
@@ -537,7 +581,7 @@
       let nuevoId = null;
       this.cambiar(() => {
         const t = this.tablaDe(sid, bid);
-        nuevoId = this.siguienteId("f", t.filas);
+        nuevoId = this.siguienteId(t, "siguiente_fila", "f", t.filas);
         let i = indice;
         if (i === null || i === undefined) i = (t.clase === "registro" && t.nuevas_filas === "arriba") ? 0 : t.filas.length;
         t.filas.splice(i, 0, { id: nuevoId, celdas: {} });
@@ -560,23 +604,42 @@
       });
     }
 
+    /* ---- redimensionar (arrastre del borde entre dos columnas) ---- */
+    /* La columna cid pasa a medir `ancho` mm y la siguiente cede o recibe la diferencia, asi la
+       tabla sigue sumando lo mismo. Se redondea a 0,5 mm y ninguna baja de 5 mm. */
+    redimensionarColumna(sid, bid, cid, ancho) {
+      return this.cambiar(() => {
+        const { t, i } = this.columnaDe(sid, bid, cid);
+        if (i + 1 >= t.columnas.length) throw new Error("La última columna no tiene una vecina a la derecha.");
+        const a = t.columnas[i], b = t.columnas[i + 1];
+        const total = Number(a.ancho_mm) + Number(b.ancho_mm);
+        if (total < 2 * ANCHO_MINIMO) throw new Error("Las dos columnas son demasiado angostas.");
+        const nuevo = Math.max(ANCHO_MINIMO, Math.min(Math.round(Number(ancho) * 2) / 2, total - ANCHO_MINIMO));
+        a.ancho_mm = nuevo;
+        b.ancho_mm = Math.round((total - nuevo) * 10000) / 10000;
+      });
+    }
+
     /* ---- celdas ---- */
     valorCelda(sid, bid, fid, cid) {
       const { f } = this.filaDe(sid, bid, fid);
       const v = f.celdas ? f.celdas[cid] : undefined;
-      if (v && typeof v === "object") return { texto: v.texto || "", lineas: (v.lineas || []).slice(), color: v.color || "", estilo: v.estilo || "" };
-      return { texto: v === undefined || v === null ? "" : String(v), lineas: [], color: "", estilo: "" };
+      if (v && typeof v === "object") return { texto: v.texto || "", color: v.color || "", tipo: v.tipo || "" };
+      return { texto: v === undefined || v === null ? "" : String(v), color: "", tipo: "" };
     }
 
-    /* Guarda una celda: texto simple si no tiene nada mas; objeto si lleva lineas, color o estilo. */
+    /* Tipo con el que se trata una celda: el suyo, o el de su columna. */
+    tipoEfectivo(sid, bid, fid, cid) {
+      return this.valorCelda(sid, bid, fid, cid).tipo || this.columnaDe(sid, bid, cid).c.tipo;
+    }
+
+    /* Guarda una celda: texto simple si no tiene nada mas; objeto si lleva color o tipo propio. */
     guardarCelda(f, cid, v) {
       if (!f.celdas) f.celdas = {};
-      const extra = v.lineas.length || v.color || v.estilo;
-      if (!extra) { f.celdas[cid] = v.texto; return; }
+      if (!v.color && !v.tipo) { f.celdas[cid] = v.texto; return; }
       const o = { texto: v.texto };
-      if (v.lineas.length) o.lineas = v.lineas;
       if (v.color) o.color = v.color;
-      if (v.estilo) o.estilo = v.estilo;
+      if (v.tipo) o.tipo = v.tipo;
       f.celdas[cid] = o;
     }
 
@@ -592,15 +655,22 @@
 
     celdaTexto(sid, bid, fid, cid, texto) { return this.celdaCambiar(sid, bid, fid, cid, (v) => { v.texto = texto; }); }
 
-    /* campo: "color" (ninguno, amarillo, gris o "" para automatico) o "estilo" (texto, identificador o "") */
-    celdaPropiedad(sid, bid, fid, cid, campo, valor) {
-      if (campo === "color" && !["", "ninguno", "amarillo", "gris"].includes(valor)) throw new Error("Color no válido.");
-      if (campo === "estilo" && !["", "texto", "identificador"].includes(valor)) throw new Error("Estilo no válido.");
-      return this.celdaCambiar(sid, bid, fid, cid, (v) => { v[campo] = valor; });
+    /* Cambia la primera linea (el estado elegido en la lista) y deja el resto del texto. */
+    celdaPrimeraLinea(sid, bid, fid, cid, linea) {
+      return this.celdaCambiar(sid, bid, fid, cid, (v) => {
+        const partes = v.texto.split("\n");
+        partes[0] = linea;
+        v.texto = partes.join("\n");
+      });
     }
 
-    celdaLineas(sid, bid, fid, cid, lineas) {
-      return this.celdaCambiar(sid, bid, fid, cid, (v) => { v.lineas = lineas.filter((x) => x !== ""); });
+    /* campo: "color" (ninguno, amarillo, gris o "" para automatico) o "tipo" (texto,
+       identificador, estado o "" para el de la columna) */
+    celdaPropiedad(sid, bid, fid, cid, campo, valor) {
+      if (campo === "color" && !["", "ninguno", "amarillo", "gris"].includes(valor)) throw new Error("Color no válido.");
+      if (campo === "tipo" && !["", "texto", "identificador", "estado"].includes(valor)) throw new Error("Tipo de celda no válido.");
+      if (campo !== "color" && campo !== "tipo") throw new Error("Propiedad de celda no válida.");
+      return this.celdaCambiar(sid, bid, fid, cid, (v) => { v[campo] = valor; });
     }
   }
 

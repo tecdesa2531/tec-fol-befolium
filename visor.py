@@ -12,7 +12,7 @@ import mimetypes
 import re
 from pathlib import Path
 
-from validacion import color_de_estado, texto_de
+from validacion import color_de_estado, primera_linea, texto_de
 
 WEB = Path(__file__).resolve().parent / "web"
 CLASE_COLOR = {"amarillo": "pend", "gris": "na"}
@@ -85,17 +85,15 @@ def html_imagen(b, carpeta, r):
 def html_celda(celda, columna, estados, r):
     texto = texto_de(celda)
     objeto = celda if isinstance(celda, dict) else {}
+    tipo = objeto.get("tipo") or columna.get("tipo")        # la celda puede salirse del tipo de su columna
     color = objeto.get("color")
-    if not color and columna.get("tipo") == "estado":
-        color = color_de_estado(texto, estados)
+    if not color and tipo == "estado":
+        color = color_de_estado(primera_linea(texto), estados)
     clase = CLASE_COLOR.get(color or "ninguno", "")
-    estilo = objeto.get("estilo") or ("identificador" if columna.get("tipo") == "identificador" else "texto")
-    if estilo == "identificador" and "`" not in texto and texto:
+    if tipo == "identificador" and "`" not in texto and texto:
         cuerpo = "<br>".join("<code>%s</code>" % html.escape(p, quote=False) for p in texto.split("\n"))
     else:
         cuerpo = formato(texto)
-    for linea in objeto.get("lineas", []):
-        cuerpo += '<span class="sub">%s</span>' % formato(linea)
     return "<td%s%s>%s</td>" % (' class="%s"' % clase if clase else "", r, cuerpo)
 
 
@@ -199,8 +197,12 @@ html,body{background:#F0F1F5}
 .f-asa{position:absolute;width:20px;height:26px;display:flex;align-items:center;justify-content:center;
   background:#fff;border:1px solid #D0D4DC;border-radius:6px;color:#667085;font:12px/1 system-ui,sans-serif;
   cursor:grab;user-select:none;z-index:40;box-shadow:0 1px 3px rgba(20,30,50,.15)}
+.f-mas{position:absolute;display:flex;align-items:center;justify-content:center;background:rgba(0,112,192,.14);
+  color:#0070C0;font:700 13px/1 system-ui,sans-serif;border-radius:4px;cursor:pointer;user-select:none;z-index:45}
+.f-mas:hover{background:rgba(0,112,192,.32)}
+.f-borde{position:absolute;width:2px;background:#0070C0;pointer-events:none;z-index:46}
 }
-@media print{.f-linea,.f-asa{display:none!important}}
+@media print{.f-linea,.f-asa,.f-mas,.f-borde{display:none!important}}
 </style>
 """ 
 

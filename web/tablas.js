@@ -209,40 +209,27 @@
     texto.value = v.texto;
     texto.addEventListener("change", () => ancla(() => modelo.celdaTexto(sid, bid, fid, cid, texto.value.replace(/^\n+|\n+$/g, ""))));
     texto.addEventListener("keydown", (ev) => ev.stopPropagation());
-    cont.appendChild(campo("Texto", texto));
+    cont.appendChild(campo("Texto (cada Enter es una línea nueva)", texto));
 
-    if (col.tipo === "estado") {
+    const TEXTO_TIPO = { texto: "Texto", identificador: "Identificador (Consolas)", estado: "Estado" };
+    cont.appendChild(campo("Tipo de la celda", selector(
+      [["", "Igual que la columna (" + TEXTO_TIPO[col.tipo] + ")"], ["texto", "Texto"], ["identificador", "Identificador (Consolas)"], ["estado", "Estado"]],
+      v.tipo, (x) => ancla(() => modelo.celdaPropiedad(sid, bid, fid, cid, "tipo", x)))));
+
+    const esEstado = (v.tipo || col.tipo) === "estado";
+    if (esEstado) {
+      const primera = v.texto.split("\n")[0];
       const estados = (modelo.doc.estados || []).map((e) => [e.texto, e.texto + " (" + e.color + ")"]);
-      const enLista = estados.some(([x]) => x === v.texto);
+      const enLista = estados.some(([x]) => x === primera);
       const opciones = [["", "— elegir un estado —"]].concat(estados);
-      cont.appendChild(campo("Estado", selector(opciones, enLista ? v.texto : "",
-        (x) => { if (x) ancla(() => modelo.celdaTexto(sid, bid, fid, cid, x)); })));
-      if (v.texto && !enLista) cont.appendChild(el("p", { class: "ayuda", texto: "El texto actual no está en la lista de estados (puede ser un caso especial, como «(no estable)»)." }));
+      cont.appendChild(campo("Estado (primera línea)", selector(opciones, enLista ? primera : "",
+        (x) => { if (x) ancla(() => modelo.celdaPrimeraLinea(sid, bid, fid, cid, x)); })));
+      if (primera && !enLista) cont.appendChild(el("p", { class: "ayuda", texto: "La primera línea no está en la lista de estados (puede ser un caso especial, como «(no estable)»)." }));
     }
 
     cont.appendChild(campo("Color de la celda", selector(
-      [["", col.tipo === "estado" ? "Automático (según el estado)" : "Sin color"], ["ninguno", "Sin color (fijo)"], ["amarillo", "Amarillo (requiere atención)"], ["gris", "Gris (no existe o no aplica)"]],
+      [["", esEstado ? "Automático (según el estado)" : "Sin color"], ["ninguno", "Sin color (fijo)"], ["amarillo", "Amarillo (requiere atención)"], ["gris", "Gris (no existe o no aplica)"]],
       v.color, (x) => ancla(() => modelo.celdaPropiedad(sid, bid, fid, cid, "color", x)))));
-    cont.appendChild(campo("Estilo del texto", selector(
-      [["", "Según la columna"], ["texto", "Texto"], ["identificador", "Identificador (Consolas)"]],
-      v.estilo, (x) => ancla(() => modelo.celdaPropiedad(sid, bid, fid, cid, "estilo", x)))));
-
-    cont.appendChild(el("h3", { class: "subtitulo", texto: "Líneas adicionales" }));
-    v.lineas.forEach((linea, k) => {
-      const entrada = entradaTexto(linea, (x) => {
-        const nuevas = v.lineas.slice();
-        nuevas[k] = x;
-        ancla(() => modelo.celdaLineas(sid, bid, fid, cid, nuevas));
-      });
-      const quitar = boton("✕", () => {
-        const nuevas = v.lineas.slice();
-        nuevas.splice(k, 1);
-        ancla(() => modelo.celdaLineas(sid, bid, fid, cid, nuevas));
-      }, "", false);
-      quitar.title = "Quitar la línea";
-      cont.appendChild(el("div", { class: "fila-linea" }, [entrada, quitar]));
-    });
-    cont.appendChild(fila(boton("+ Línea", () => ancla(() => modelo.celdaLineas(sid, bid, fid, cid, v.lineas.concat(["Nueva línea"]))))));
 
     cont.appendChild(el("h3", { class: "subtitulo", texto: "Fila" }));
     cont.appendChild(fila(

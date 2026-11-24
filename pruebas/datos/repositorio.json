@@ -148,7 +148,7 @@
               "celdas": {
                 "rec": {
                   "texto": "Rol de lectura de reportes",
-                  "estilo": "texto"
+                  "tipo": "texto"
                 },
                 "dev": "No existe",
                 "pre": "2 de 3 aplicadas",
@@ -158,10 +158,13 @@
                 }
               }
             }
-          ]
+          ],
+          "siguiente_fila": 3,
+          "siguiente_columna": 1
         }
       ],
-      "secciones": []
+      "secciones": [],
+      "siguiente_bloque": 3
     },
     {
       "id": "historial",
@@ -199,10 +202,13 @@
                   }
                 }
               ],
-              "nuevas_filas": "arriba"
+              "nuevas_filas": "arriba",
+              "siguiente_fila": 2,
+              "siguiente_columna": 1
             }
           ],
-          "secciones": []
+          "secciones": [],
+          "siguiente_bloque": 2
         }
       ]
     }

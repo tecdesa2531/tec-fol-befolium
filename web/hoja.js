@@ -30,6 +30,9 @@
     d.addEventListener("click", (ev) => {
       if (ev.target.closest("a")) ev.preventDefault();
       if (ev.target.closest(".f-asa")) return;
+      if (Date.now() - finArrastre < 300) return;            // el clic que cierra un arrastre de columna
+      const mas = ev.target.closest(".f-mas");
+      if (mas) { F.Editor.agregarDesdeBarra(mas.dataset.tipo, mas.dataset.sid, mas.dataset.bid); return; }
       const t = ev.target.closest("[data-ref]");
       F.Editor.alHacerClic(t ? t.dataset.ref : null);
     });
@@ -38,6 +41,14 @@
       if (t) F.Editor.alDobleClic(t.dataset.ref);
     });
     d.addEventListener("keydown", (ev) => F.Editor.alTeclear(ev));
+    d.addEventListener("mousemove", alMover);
+    d.addEventListener("mouseleave", quitarAuxiliares);
+    d.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== 0 || !borde || arrastre) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      iniciarArrastre(ev);
+    }, true);
     d.addEventListener("dragstart", (ev) => {
       const asa = ev.target.closest && ev.target.closest(".f-asa");
       if (!asa) return;
@@ -82,9 +93,156 @@
       const y = w.scrollY;
       await w.FoliumPaginar(r.src, r.cfg);
       w.scrollTo(0, y);
+      quitarAuxiliares();
       marcarSeleccion(F.Editor.seleccion, false);
     });
     await inactiva();
+  }
+
+  /* ---------- barras + y ancho de columnas (solo en el editor) ----------
+     Al acercar el cursor al borde inferior (o superior, en registros con filas nuevas arriba) o
+     al borde derecho de una tabla aparece una barra con + para agregar una fila o una columna.
+     Sobre el borde entre dos columnas el cursor pasa a redimensionar y el borde se resalta; al
+     arrastrar solo cambian los anchos en pantalla y al soltar se guarda y se repagina.
+     Todo esto se agrega a la hoja del editor: nunca esta en el HTML guardado ni al imprimir. */
+  const ZONA_BORDE = 4;          // px a cada lado del borde entre columnas
+  const GROSOR_BARRA = 12;       // px de la barra +
+  const ANCHO_MINIMO = 5;        // mm, igual que el modelo
+  let borde = null;              // borde de columnas bajo el cursor
+  let barra = null;              // clave de la barra + visible
+  let cursorPuesto = false;
+  let arrastre = false;
+  let finArrastre = 0;
+
+  function quitarAuxiliares() {
+    if (!marcoListo || arrastre) return;
+    const d = documento();
+    d.querySelectorAll(".f-mas,.f-borde").forEach((e) => e.remove());
+    if (cursorPuesto) { d.documentElement.style.cursor = ""; cursorPuesto = false; }
+    borde = null;
+    barra = null;
+  }
+
+  function ponerBarra(tipo, sid, bid, r) {
+    const clave = [tipo, sid, bid, Math.round(r.left), Math.round(r.top)].join("|");
+    if (barra === clave) return;
+    quitarAuxiliares();
+    const d = documento();
+    const w = ventana();
+    const e = d.createElement("div");
+    e.className = "f-mas";
+    e.dataset.tipo = tipo; e.dataset.sid = sid; e.dataset.bid = bid;
+    e.textContent = "+";
+    e.title = tipo === "fila" ? "Agregar una fila" : "Agregar una columna";
+    if (tipo === "fila") {
+      const arriba = r.arriba;
+      e.style.left = (r.left + w.scrollX) + "px";
+      e.style.width = r.width + "px";
+      e.style.height = GROSOR_BARRA + "px";
+      e.style.top = ((arriba ? r.top - GROSOR_BARRA - 1 : r.bottom + 1) + w.scrollY) + "px";
+    } else {
+      e.style.left = (r.right + 2 + w.scrollX) + "px";
+      e.style.width = GROSOR_BARRA + "px";
+      e.style.top = (r.top + w.scrollY) + "px";
+      e.style.height = r.height + "px";
+    }
+    d.body.appendChild(e);
+    barra = clave;
+  }
+
+  function ponerBorde(b) {
+    quitarAuxiliares();
+    const d = documento();
+    const w = ventana();
+    const r = b.tabla.getBoundingClientRect();
+    const l = d.createElement("div");
+    l.className = "f-borde";
+    l.style.left = (b.x - 1 + w.scrollX) + "px";
+    l.style.top = (r.top + w.scrollY) + "px";
+    l.style.height = r.height + "px";
+    d.body.appendChild(l);
+    d.documentElement.style.cursor = "col-resize";
+    cursorPuesto = true;
+    borde = b;
+  }
+
+  function alMover(ev) {
+    if (arrastre) return;
+    const d = documento();
+    if (ev.buttons || d.querySelector(".f-editando") || !F.Editor.modelo()) { quitarAuxiliares(); return; }
+    const x = ev.clientX, y = ev.clientY;
+    let nuevoBorde = null, nuevaBarra = null;
+    for (const t of d.querySelectorAll('table[data-ref^="b:"]')) {
+      const r = t.getBoundingClientRect();
+      if (x < r.left - 2 || x > r.right + GROSOR_BARRA + 4 || y < r.top - GROSOR_BARRA - 2 || y > r.bottom + GROSOR_BARRA + 2) continue;
+      const [, sid, bid] = t.dataset.ref.split(":");
+      if (y >= r.top && y <= r.bottom && t.tHead) {
+        const celdas = Array.from(t.tHead.rows[0].cells);
+        for (let i = 0; i < celdas.length - 1; i++) {
+          const bx = celdas[i].getBoundingClientRect().right;
+          if (Math.abs(x - bx) <= ZONA_BORDE) {
+            nuevoBorde = { tabla: t, sid: sid, bid: bid, indice: i, cid: (celdas[i].dataset.ref || "").split(":")[3], x: bx };
+            break;
+          }
+        }
+        if (nuevoBorde) break;
+      }
+      let tabla;
+      try { tabla = F.Editor.modelo().tablaDe(sid, bid); } catch (e) { continue; }
+      const arriba = tabla.clase === "registro" && tabla.nuevas_filas === "arriba";
+      const piezas = elementosDe(t.dataset.ref);
+      const objetivo = arriba ? piezas[0] : piezas[piezas.length - 1];      // trozo que lleva la barra de filas
+      const enFila = t === objetivo && x >= r.left && x <= r.right &&
+        (arriba ? (y >= r.top - GROSOR_BARRA - 2 && y <= r.top + 6) : (y >= r.bottom - 6 && y <= r.bottom + GROSOR_BARRA + 2));
+      if (enFila) {
+        nuevaBarra = { tipo: "fila", sid: sid, bid: bid, r: { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height, arriba: arriba } };
+        break;
+      }
+      if (x >= r.right - 6 && y >= r.top && y <= r.bottom) {
+        nuevaBarra = { tipo: "columna", sid: sid, bid: bid, r: { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height } };
+        break;
+      }
+    }
+    if (nuevoBorde) { if (!borde || borde.x !== nuevoBorde.x || borde.tabla !== nuevoBorde.tabla) ponerBorde(nuevoBorde); }
+    else if (nuevaBarra) ponerBarra(nuevaBarra.tipo, nuevaBarra.sid, nuevaBarra.bid, nuevaBarra.r);
+    else quitarAuxiliares();
+  }
+
+  function iniciarArrastre(ev) {
+    const b = borde;
+    const d = documento();
+    const w = ventana();
+    const piezas = elementosDe("b:" + b.sid + ":" + b.bid);
+    const cols = piezas.map((t) => Array.from(t.querySelectorAll("colgroup > col")));
+    const i = b.indice;
+    const inicial = parseFloat(cols[0][i].style.width);
+    const total = inicial + parseFloat(cols[0][i + 1].style.width);
+    const mmPorPx = 150 / b.tabla.getBoundingClientRect().width;
+    const linea = d.querySelector(".f-borde");
+    const capa = d.createElement("div");
+    capa.style.cssText = "position:fixed;left:0;top:0;right:0;bottom:0;z-index:2000;cursor:col-resize";
+    d.body.appendChild(capa);
+    try { capa.setPointerCapture(ev.pointerId); } catch (e) { /* sin captura: sigue dentro de la hoja */ }
+    arrastre = true;
+    let ancho = inicial;
+    capa.addEventListener("pointermove", (e) => {
+      ancho = Math.max(ANCHO_MINIMO, Math.min(inicial + (e.clientX - ev.clientX) * mmPorPx, total - ANCHO_MINIMO));
+      cols.forEach((lista) => {
+        lista[i].style.width = ancho + "mm";
+        lista[i + 1].style.width = (total - ancho) + "mm";
+      });
+      if (linea) linea.style.left = (b.tabla.tHead.rows[0].cells[i].getBoundingClientRect().right - 1 + w.scrollX) + "px";
+    });
+    const soltar = () => {
+      if (!arrastre) return;
+      capa.remove();
+      arrastre = false;
+      finArrastre = Date.now();
+      quitarAuxiliares();
+      F.Editor.redimensionar(b.sid, b.bid, b.cid, ancho);
+    };
+    capa.addEventListener("pointerup", soltar);
+    capa.addEventListener("pointercancel", soltar);
   }
 
   /* ---------- seleccion ---------- */

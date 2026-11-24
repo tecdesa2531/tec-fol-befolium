@@ -52,7 +52,7 @@ Esquema funcional, sin estilos. El diseño visual va al final, con la maqueta de
 | Sección | Título, identificador (solo lectura), nivel, "opcional", "anexo" (solo nivel 1) |
 | Párrafo, nota, nota destacada, etiqueta | Tipo de bloque (se puede cambiar entre ellos) y "no separar del siguiente" |
 | Tabla | Clase (estado o registro); columnas con título, tipo y ancho en mm, y la suma "N de 150 mm" (en rojo si no es 150); agregar, quitar y ordenar columnas y filas |
-| Celda | Texto, estado (lista), color (automático, ninguno, amarillo o gris), estilo (texto o identificador) y líneas adicionales |
+| Celda | Texto, estado (lista), color (automático, ninguno, amarillo o gris), tipo de la celda (igual que la columna, texto, identificador o estado) |
 | Imagen | Archivo, alto en mm, descripción y fuente `.drawio` |
 
 ## Flujo 1: agregar una sección
@@ -68,7 +68,7 @@ Esquema funcional, sin estilos. El diseño visual va al final, con la maqueta de
 1. Clic en la celda: queda seleccionada y el panel derecho muestra sus propiedades.
 2. Doble clic o empezar a escribir: se edita ahí mismo. `Tab` y `Mayús+Tab` pasan a la celda siguiente o anterior, `Enter` confirma y `Esc` cancela.
 3. En una columna de estado, el panel derecho ofrece la lista de estados; el color sale del texto, o se fija a mano en la celda.
-4. Para más líneas debajo del texto, "líneas adicionales" en el panel derecho.
+4. Para más líneas debajo del texto, Enter en el cuadro de texto del panel derecho (o Mayús+Enter en la hoja).
 5. Al confirmar: se actualiza el documento, se recalcula la paginación (la tabla puede partirse entre hojas) y se guarda solo. Si el estado no está en la lista o las columnas no suman 150 mm, se marca al instante.
 
 ## Flujo 3: guardar

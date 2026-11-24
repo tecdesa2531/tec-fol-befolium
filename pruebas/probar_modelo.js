@@ -204,11 +204,10 @@ prueba("tablas: crear, columnas con reparto a 150 mm y celdas", () => {
   assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c2, "hola");        // texto simple
   m.celdaPropiedad("b", t, "f1", "c2", "color", "amarillo");
   assert.deepStrictEqual(m.tablaDe("b", t).filas[0].celdas.c2, { texto: "hola", color: "amarillo" });
-  m.celdaLineas("b", t, "f1", "c2", ["una", "", "dos"]);
-  assert.deepStrictEqual(m.tablaDe("b", t).filas[0].celdas.c2.lineas, ["una", "dos"]);
+  m.celdaTexto("b", t, "f1", "c2", "hola\nsegunda linea");                   // una celda es un solo texto
   m.celdaPropiedad("b", t, "f1", "c2", "color", "");
-  m.celdaLineas("b", t, "f1", "c2", []);
-  assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c2, "hola");        // vuelve a texto simple
+  assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c2, "hola\nsegunda linea");
+  m.celdaTexto("b", t, "f1", "c2", "hola");
   assert.strictEqual(m.contenidoColumna("b", t, "c2"), 1);
   m.quitarColumna("b", t, "c2");
   assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c2, undefined);
@@ -243,6 +242,88 @@ prueba("tablas de registro: filas nuevas arriba o abajo", () => {
   assert.deepStrictEqual(m.tablaDe("b", t).filas.map((f) => f.id), ["f3", "f1", "f2"]);
   m.tablaClase("b", t, "estado");
   assert.strictEqual(m.tablaDe("b", t).nuevas_filas, undefined);
+});
+
+prueba("celdas: tipo propio, tipo efectivo y primera linea", () => {
+  const m = new Modelo("general", doc());
+  const t = m.agregarTabla("b", null);
+  assert.strictEqual(m.tipoEfectivo("b", t, "f1", "c1"), "texto");
+  m.celdaPropiedad("b", t, "f1", "c1", "tipo", "estado");
+  assert.strictEqual(m.tipoEfectivo("b", t, "f1", "c1"), "estado");
+  m.celdaTexto("b", t, "f1", "c1", "En uso\n22/11/2026");
+  m.celdaPrimeraLinea("b", t, "f1", "c1", "Pendiente");
+  assert.deepStrictEqual(m.tablaDe("b", t).filas[0].celdas.c1, { texto: "Pendiente\n22/11/2026", tipo: "estado" });
+  m.propiedadColumna("b", t, "c2", "tipo", "estado");
+  m.celdaPropiedad("b", t, "f1", "c2", "tipo", "texto");               // celda texto dentro de una columna estado
+  assert.strictEqual(m.tipoEfectivo("b", t, "f1", "c2"), "texto");
+  m.celdaPropiedad("b", t, "f1", "c2", "tipo", "");
+  assert.strictEqual(m.tipoEfectivo("b", t, "f1", "c2"), "estado");
+  assert.throws(() => m.celdaPropiedad("b", t, "f1", "c1", "tipo", "otro"), /no válido/);
+  assert.throws(() => m.celdaPropiedad("b", t, "f1", "c1", "estilo", "texto"), /no válida/);
+});
+
+prueba("id de seccion repetido: antepone padre, abuelo y al final un numero", () => {
+  const m = new Modelo("general", { formato: 1, documento: "general", secciones: [
+    { id: "cuentas", titulo: "Cuentas", bloques: [], secciones: [
+      { id: "cuenta-eks", titulo: "Cuenta EKS", bloques: [], secciones: [
+        { id: "rol-iam", titulo: "Rol IAM", bloques: [], secciones: [] }] },
+      { id: "cuenta-red", titulo: "Cuenta red", bloques: [], secciones: [] }] }] });
+  const n = m.agregarSeccion("cuenta-red", "dentro", "Rol IAM");
+  assert.strictEqual(n, "cuenta-red-rol-iam");
+  const otra = m.agregarSeccion("cuenta-red", "dentro", "Rol IAM");
+  assert.strictEqual(otra, "cuentas-cuenta-red-rol-iam");
+  const ultima = m.agregarSeccion("cuenta-red", "dentro", "Rol IAM");
+  assert.strictEqual(ultima, "cuentas-cuenta-red-rol-iam-2");
+});
+
+prueba("id de seccion que sigue al titulo con prefijo de padre", () => {
+  const m = new Modelo("general", { formato: 1, documento: "general", secciones: [
+    { id: "cuenta-eks", titulo: "Cuenta EKS", bloques: [], secciones: [
+      { id: "rol-iam", titulo: "Rol IAM", bloques: [], secciones: [] },
+      { id: "x", titulo: "X", bloques: [], secciones: [] }] }] });
+  assert.strictEqual(m.confirmarTitulo("x", "Rol IAM"), "cuenta-eks-rol-iam");
+  m.fijos = new Set(["cuenta-eks-rol-iam"]);
+  assert.strictEqual(m.confirmarTitulo("cuenta-eks-rol-iam", "Otro"), "cuenta-eks-rol-iam");   // fijo
+});
+
+prueba("contadores: un id borrado no se reutiliza (bloques, filas y columnas)", () => {
+  const m = new Modelo("general", doc());
+  const b2 = m.agregarBloque("a", null, "nota");
+  assert.strictEqual(b2, "b2");
+  m.quitarBloque("a", "b2");
+  assert.strictEqual(m.agregarBloque("a", null, "nota"), "b3");
+  assert.strictEqual(m.buscar("a").sec.siguiente_bloque, 4);
+  const t = m.agregarTabla("b", null);
+  m.agregarFila("b", t, null); m.agregarFila("b", t, null);            // f2, f3
+  m.quitarFila("b", t, "f3");
+  assert.strictEqual(m.agregarFila("b", t, null), "f4");
+  const c4 = m.agregarColumna("b", t, null);
+  m.quitarColumna("b", t, c4);
+  assert.strictEqual(m.agregarColumna("b", t, null), "c5");
+  const copia = m.duplicarBloque("b", t);
+  const tc = m.tablaDe("b", copia);
+  assert.deepStrictEqual(tc.filas.map((f) => f.id), ["f1", "f2", "f3"]);
+  assert.strictEqual(tc.siguiente_fila, 4);
+  assert.strictEqual(tc.siguiente_columna, 6);
+  // sin contador (documento viejo): empieza en el maximo + 1
+  const v = new Modelo("general", { formato: 1, documento: "general", secciones: [
+    { id: "a", titulo: "A", bloques: [{ tipo: "parrafo", id: "b7", texto: "x" }], secciones: [] }] });
+  assert.strictEqual(v.agregarBloque("a", null, "nota"), "b8");
+});
+
+prueba("redimensionar: la vecina cede, suma fija, minimo 5 mm y medio mm", () => {
+  const m = new Modelo("general", doc());
+  const t = m.agregarTabla("b", null);                                  // 50 + 50 + 50
+  m.redimensionarColumna("b", t, "c1", 60.3);
+  assert.deepStrictEqual(m.tablaDe("b", t).columnas.map((c) => c.ancho_mm), [60.5, 39.5, 50]);
+  assert.strictEqual(m.sumaAnchos("b", t), 150);
+  m.redimensionarColumna("b", t, "c2", 500);                            // tope: la vecina queda en 5 mm
+  assert.deepStrictEqual(m.tablaDe("b", t).columnas.map((c) => c.ancho_mm), [60.5, 84.5, 5]);
+  m.redimensionarColumna("b", t, "c1", 1);                              // minimo de la propia columna
+  assert.strictEqual(m.tablaDe("b", t).columnas[0].ancho_mm, 5);
+  assert.strictEqual(m.sumaAnchos("b", t), 150);
+  assert.throws(() => m.redimensionarColumna("b", t, "c3", 20), /última/);
+  assert.strictEqual(m.redimensionarColumna("b", t, "c1", 5), false);   // sin cambio no se registra
 });
 
 console.log("\n" + pruebas + " pruebas del modelo correctas");

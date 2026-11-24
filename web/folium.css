@@ -172,7 +172,6 @@ button.peligro{color:var(--error);border-color:#E6B8B4}
 #props .fila-columna{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 #props .fila-columna select{flex:1;min-width:0}
 #props .fila-columna input{width:68px}
-#props .fila-linea{display:flex;gap:6px;margin-bottom:6px}
 #props input[type="number"],#props input[type="text"]{padding:6px 8px;font:inherit;border:1px solid var(--linea-fuerte);border-radius:6px}
 #props .tarjeta>input{width:100%}
 #props .unidad,#props .suma{font-size:12px;color:var(--suave)}

@@ -109,7 +109,8 @@
           "texto": "Primer parrafo.\n\nSegundo parrafo."
         }
       ],
-      "secciones": []
+      "secciones": [],
+      "siguiente_bloque": 4
     },
     {
       "id": "versiones",
@@ -143,15 +144,12 @@
               "id": "f1",
               "celdas": {
                 "doc": "Repositorio",
-                "ver": {
-                  "texto": "0.1.0",
-                  "lineas": [
-                    "01/01/2026"
-                  ]
-                }
+                "ver": "`0.1.0`\n01/01/2026"
               }
             }
-          ]
+          ],
+          "siguiente_fila": 2,
+          "siguiente_columna": 1
         }
       ],
       "secciones": [
@@ -204,7 +202,7 @@
                   "celdas": {
                     "rec": {
                       "texto": "Rol de lectura de reportes",
-                      "estilo": "texto"
+                      "tipo": "texto"
                     },
                     "dev": "No existe",
                     "pre": "2 de 3 aplicadas",
@@ -214,7 +212,9 @@
                     }
                   }
                 }
-              ]
+              ],
+              "siguiente_fila": 3,
+              "siguiente_columna": 1
             }
           ],
           "secciones": [
@@ -233,11 +233,14 @@
                   "fuente_drawio": "03_Diagramas/demo.drawio"
                 }
               ],
-              "secciones": []
+              "secciones": [],
+              "siguiente_bloque": 2
             }
-          ]
+          ],
+          "siguiente_bloque": 2
         }
-      ]
+      ],
+      "siguiente_bloque": 3
     }
   ],
   "versiones_vigentes": {

@@ -96,7 +96,8 @@
           "texto": "Texto de ejemplo."
         }
       ],
-      "secciones": []
+      "secciones": [],
+      "siguiente_bloque": 2
     },
     {
       "id": "cuenta-data",
@@ -109,7 +110,8 @@
           "texto": "No aplica en esta aplicacion."
         }
       ],
-      "secciones": []
+      "secciones": [],
+      "siguiente_bloque": 2
     },
     {
       "id": "anexo-a",
@@ -135,10 +137,13 @@
                 "regla": "Permitir trafico interno [pendiente]()"
               }
             }
-          ]
+          ],
+          "siguiente_fila": 2,
+          "siguiente_columna": 1
         }
       ],
-      "secciones": []
+      "secciones": [],
+      "siguiente_bloque": 2
     }
   ]
 }

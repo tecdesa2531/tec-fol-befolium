@@ -35,10 +35,11 @@ El documento es un árbol abierto. La profundidad define el título: nivel 1 = h
 
 ```json
 {"id": "inv-bd", "titulo": "Base de datos", "opcional": false, "anexo": false,
- "bloques": [ ... ], "secciones": [ ... ]}
+ "bloques": [ ... ], "siguiente_bloque": 4, "secciones": [ ... ]}
 ```
 
-- `id`: identificador estable (`data-id`). Se crea una vez a partir del título (minúsculas y guiones) y **no cambia aunque cambie el título**. Es único en el documento. Los enlaces internos y la comparación entre versiones dependen de él. Un `id` quitado no se reutiliza.
+- `id`: identificador estable (`data-id`). Se crea una vez a partir del título (minúsculas y guiones) y **no cambia aunque cambie el título**. Es único en el documento: si el título se repite, se antepone el id del padre (`cuenta-eks-rol-iam`), luego también el del abuelo y, como último recurso, un sufijo numérico (`-2`). Mientras la sección no esté en ninguna versión guardada, el `id` sigue al título; después queda fijo. Los enlaces internos y la comparación entre versiones dependen de él. Un `id` quitado no se reutiliza.
+- `siguiente_bloque` (opcional): contador de ids de bloque de la sección. Solo sube: si se borra `b3`, el bloque siguiente es `b4`. Debe ser mayor que el número de cualquier `id` de bloque de la sección. Si falta, se toma el máximo actual + 1.
 - `opcional`: marca secciones que pueden no existir en una aplicación (Workload y Data del documento 3). Quitarlas es borrarlas del árbol.
 - `anexo`: solo en nivel 1. No se numera.
 - Numeración (h1: `1.`, h2: `a)`), índice, números de página y enlaces internos se recalculan solos y no se guardan.
@@ -46,12 +47,12 @@ El documento es un árbol abierto. La profundidad define el título: nivel 1 = h
 
 ## 3. Texto con formato
 
-Se usa en párrafos, notas, celdas y líneas adicionales:
+Se usa en párrafos, notas y celdas:
 
 - `` `código` `` → Consolas.
 - `**negrita**`.
 - `[texto](https://...)` → enlace; `[texto](#id-de-seccion)` → enlace interno; `[texto]()` → enlace cuya URL aún no se pegó (se muestra como enlace sin destino).
-- Un salto de línea (`\n`) dentro de una celda es un salto de línea. En una nota destacada, una línea en blanco separa párrafos.
+- Un salto de línea (`\n`) dentro de una celda es una línea nueva debajo (una línea debajo de otra, sin espacio extra). En una nota destacada, una línea en blanco separa párrafos.
 
 Todos los enlaces son URL que el usuario pega.
 
@@ -88,25 +89,27 @@ Imagen:
   "filas": [
     {"id": "f1", "celdas": {
       "repo": "demo-recursos",
-      "dev": {"texto": "0.1.0", "lineas": ["en proceso `0.2.0-rc.1`"], "color": "amarillo"},
+      "dev": {"texto": "0.1.0\nen proceso `0.2.0-rc.1`", "color": "amarillo"},
       "est": "En uso"}}
-  ]
+  ],
+  "siguiente_fila": 2, "siguiente_columna": 1
 }
 ```
 
 - `clase`: `estado` (solo lo vigente) o `registro` (acumula filas).
 - `nuevas_filas` (solo en `registro`): `arriba` (la más reciente primero, como los scripts y cargas) o `abajo` (al final, como las entregas y los secretos). Borrar una fila de una tabla de registro pide confirmación.
 - Los anchos suman **150 mm**; si no, Folium avisa y no deja guardar la versión.
-- Tipo de columna = estilo por defecto de sus celdas:
+- `siguiente_fila` y `siguiente_columna` (opcionales): contadores de ids de la tabla. Solo suben: si se borra `f3`, la fila siguiente es `f4`. Deben ser mayores que el número de cualquier `id` `f<N>` o `c<N>` existente. Si faltan, se toma el máximo actual + 1.
+- Tipo de columna = tipo por defecto de sus celdas:
   - `texto`: Georgia 8 pt.
   - `identificador`: Consolas 7,5 pt.
   - `estado`: el color sale de la lista de estados.
 - Una celda es un texto simple o un objeto:
-  - `texto`: admite el formato de la sección 3 en cualquier tipo de columna.
-  - `lineas`: líneas adicionales debajo (`span.sub`), también con formato.
+  - `texto`: admite el formato de la sección 3 y saltos de línea. Para el color y la validación de estado cuenta solo la **primera línea**.
   - `color`: `ninguno`, `amarillo` o `gris`. Se puede fijar en cualquier celda, aunque no sea un estado de la lista. Si no se fija, el color sale de la lista de estados.
-  - `estilo`: `texto` o `identificador`, para cambiar el estilo por defecto de la columna en esa celda (por ejemplo, un nombre lógico en texto normal dentro de una columna identificador).
-- Filas y columnas llevan `id` estable.
+  - `tipo`: `texto`, `identificador` o `estado`. Es la excepción de esa celda al tipo de su columna y funciona en cualquier columna (una celda estado dentro de una columna de texto, o una de texto dentro de una columna de estado). Si falta, vale el tipo de la columna. Una celda de tipo `estado` calcula su color sola y se valida como estado.
+  - Los campos anteriores `estilo` y `lineas` ya no existen: Folium los migra al abrir (`estilo` pasa a `tipo`; las líneas pasan al texto) y la validación rechaza los que queden.
+- Filas y columnas llevan `id` estable (`f<N>`, `c<N>`) que no se reutiliza, gracias a los contadores.
 
 ### Lista de estados
 
