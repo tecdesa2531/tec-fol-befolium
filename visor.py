@@ -96,7 +96,8 @@ def html_tabla(b, estados):
     lineas.append(" <thead><tr>%s</tr></thead>"
                   % "".join("<th>%s</th>" % formato(c["titulo"]) for c in cols))
     lineas.append(" <tbody>")
-    for f in b.get("filas", []):
+    filas = b.get("filas") or [{"celdas": {}}]    # una tabla sin filas muestra una fila vacia
+    for f in filas:
         celdas = f.get("celdas", {})
         lineas.append("  <tr>%s</tr>"
                       % "".join(html_celda(celdas.get(c["id"]), c, estados) for c in cols))
@@ -187,8 +188,19 @@ PLANTILLA = """<!DOCTYPE html>
 """
 
 
-def generar_html(doc, version=None, fecha=None, carpeta_actual=None):
+def aplicar_tokens(doc, tokens):
+    """Reemplaza {{nombre}} por su valor en todos los textos del documento."""
+    if not tokens:
+        return doc
+    texto = json.dumps(doc, ensure_ascii=False)
+    for nombre, valor in tokens.items():
+        texto = texto.replace("{{%s}}" % nombre, json.dumps(valor, ensure_ascii=False)[1:-1])
+    return json.loads(texto)
+
+
+def generar_html(doc, version=None, fecha=None, carpeta_actual=None, tokens=None):
     """HTML completo. version=None significa borrador."""
+    doc = aplicar_tokens(doc, tokens)
     cfg = configuracion(doc, version, fecha)
     cuerpo = []
     html_secciones(doc.get("secciones", []), 1, doc, carpeta_actual, cuerpo)

@@ -99,14 +99,14 @@ def validar(doc):
             sid = s.get("id", "")
             donde = "%s/%s" % (ruta, sid or "?")
             if not RE_ID.match(sid):
-                error(donde, "Identificador vacio o con caracteres no permitidos")
+                error(donde, "Identificador vacío o con caracteres no permitidos")
             elif sid in ids:
                 error(donde, "Identificador repetido")
             ids[sid] = True
             if not s.get("titulo"):
-                error(donde, "Falta el titulo")
+                error(donde, "Falta el título")
             if nivel > 3:
-                error(donde, "Maximo 3 niveles de secciones")
+                error(donde, "Máximo 3 niveles de secciones")
             if s.get("anexo") and nivel != 1:
                 error(donde, "Solo el nivel 1 puede ser anexo")
             validar_bloques(s.get("bloques", []), donde)
@@ -118,7 +118,7 @@ def validar(doc):
             bid = b.get("id", "")
             donde = "%s#%s" % (donde_seccion, bid or "?")
             if not bid or bid in vistos:
-                error(donde, "Identificador de bloque vacio o repetido")
+                error(donde, "Identificador de bloque vacío o repetido")
             vistos.add(bid)
             tipo = b.get("tipo")
             if tipo not in TIPOS_BLOQUE:
@@ -143,7 +143,7 @@ def validar(doc):
         cids = set()
         for c in columnas:
             if c.get("id") in cids or not c.get("id"):
-                error(donde, "Identificador de columna vacio o repetido")
+                error(donde, "Identificador de columna vacío o repetido")
             cids.add(c.get("id"))
             if c.get("tipo") not in TIPOS_COLUMNA:
                 error(donde, "Tipo de columna desconocido en '%s'" % c.get("titulo"))
@@ -152,12 +152,12 @@ def validar(doc):
             if abs(suma - 150) > 0.01:
                 error(donde, "Las columnas suman %g mm (deben sumar 150)" % suma)
         except (KeyError, TypeError, ValueError):
-            error(donde, "Cada columna necesita ancho_mm numerico")
+            error(donde, "Cada columna necesita ancho_mm numérico")
         fvistos = set()
         for f in t.get("filas", []):
             fid = f.get("id", "")
             if not fid or fid in fvistos:
-                error(donde, "Identificador de fila vacio o repetido")
+                error(donde, "Identificador de fila vacío o repetido")
             fvistos.add(fid)
             celdas = f.get("celdas", {})
             for cid in celdas:
@@ -178,17 +178,17 @@ def validar(doc):
                     fijo = isinstance(celda, dict) and celda.get("color")
                     if not fijo and color_de_estado(texto, estados) is None:
                         error("%s/%s" % (donde, fid),
-                              "Estado '%s' no esta en la lista" % texto.strip())
+                              "Estado '%s' no está en la lista" % texto.strip())
 
     recorrer(doc.get("secciones", []), 1, "")
 
     for donde, texto in textos:
         for m in RE_LINK_INTERNO.finditer(texto):
             if m.group(1) not in ids:
-                error(donde, "Enlace interno a una seccion que no existe: #%s" % m.group(1))
+                error(donde, "Enlace interno a una sección que no existe: #%s" % m.group(1))
         for patron in PATRONES_SECRETO:
             if patron.search(texto):
-                aviso(donde, "Posible secreto; solo se guarda donde esta, no su valor")
+                aviso(donde, "Posible secreto; solo se guarda dónde está, no su valor")
                 break
     return problemas
 

@@ -22,14 +22,14 @@ def cargar_documento(ruta):
     try:
         return json.loads(ruta.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
-        raise ValueError("%s: JSON mal formado (linea %d, columna %d): %s"
+        raise ValueError("%s: JSON mal formado (línea %d, columna %d): %s"
                          % (ruta.name, e.lineno, e.colno, e.msg))
 
 
 def cargar_aplicacion(raiz_proceso, tracking):
     """Devuelve {nombre: documento o None} para los tres documentos."""
     if not tracking_valido(tracking):
-        raise ValueError("El tracking code debe tener 6 letras o numeros")
+        raise ValueError("El tracking code debe tener 6 letras o números")
     actual = carpeta_actual(raiz_proceso, tracking)
     return {n: cargar_documento(actual / (n + ".json")) for n in DOCUMENTOS}
 

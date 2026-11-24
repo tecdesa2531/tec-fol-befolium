@@ -1,0 +1,246 @@
+{
+  "formato": 1,
+  "documento": "general",
+  "aplicacion": "{aplicacion}",
+  "organizacion": "{organizacion}",
+  "titulo_pagina": "Documento general de la aplicación",
+  "portada": [
+    {
+      "etiqueta": "Proyecto",
+      "valor": "{proyecto}"
+    },
+    {
+      "etiqueta": "Aplicación",
+      "valor": "{aplicacion}"
+    },
+    {
+      "etiqueta": "Tracking code",
+      "valor": "{tracking}"
+    },
+    {
+      "etiqueta": "Versión del documento",
+      "automatico": "version"
+    },
+    {
+      "etiqueta": "Líder técnico",
+      "valor": "{lider}"
+    },
+    {
+      "etiqueta": "Responsable de infraestructura",
+      "valor": "{responsable}"
+    },
+    {
+      "etiqueta": "Clasificación",
+      "valor": "{clasificacion}"
+    }
+  ],
+  "estados": [
+    {
+      "texto": "En uso",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Creado",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Aplicada",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Lectura",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Solo observabilidad",
+      "color": "ninguno"
+    },
+    {
+      "texto": "No existe",
+      "color": "gris"
+    },
+    {
+      "texto": "No aplica",
+      "color": "gris"
+    },
+    {
+      "texto": "No usa",
+      "color": "gris"
+    },
+    {
+      "texto": "Pendiente",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Pendiente de confirmar",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Pendiente de registrar",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Sin uso",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Sin acceso",
+      "color": "amarillo"
+    }
+  ],
+  "secciones": [
+    {
+      "id": "descripcion",
+      "titulo": "Descripción de la aplicación",
+      "bloques": [],
+      "secciones": []
+    },
+    {
+      "id": "documentos",
+      "titulo": "Documentos y versiones",
+      "bloques": [
+        {
+          "tipo": "parrafo",
+          "id": "b1",
+          "texto": "Los documentos de detalle de esta versión están en la misma carpeta que este documento.",
+          "con_siguiente": true
+        },
+        {
+          "tipo": "tabla",
+          "id": "b2",
+          "clase": "estado",
+          "columnas": [
+            {
+              "id": "c0",
+              "titulo": "Documento",
+              "ancho_mm": 52,
+              "tipo": "texto"
+            },
+            {
+              "id": "c1",
+              "titulo": "Qué contiene",
+              "ancho_mm": 70,
+              "tipo": "texto"
+            },
+            {
+              "id": "c2",
+              "titulo": "Versión vigente",
+              "ancho_mm": 28,
+              "tipo": "identificador"
+            }
+          ],
+          "filas": [
+            {
+              "id": "f1",
+              "celdas": {
+                "c0": {
+                  "texto": "Repositorio de la aplicación",
+                  "lineas": [
+                    "`{{pdf_repositorio}}`"
+                  ]
+                },
+                "c1": "Recursos del repositorio de la aplicación y qué trajo cada entrega",
+                "c2": "{{version_repositorio}}"
+              }
+            },
+            {
+              "id": "f2",
+              "celdas": {
+                "c0": {
+                  "texto": "Compartidos y manuales",
+                  "lineas": [
+                    "`{{pdf_compartidos}}`"
+                  ]
+                },
+                "c1": "Recursos en repositorios compartidos y operaciones manuales",
+                "c2": "{{version_compartidos}}"
+              }
+            }
+          ]
+        }
+      ],
+      "secciones": [
+        {
+          "id": "tag-desplegado",
+          "titulo": "Tag desplegado del repositorio de la aplicación",
+          "bloques": [
+            {
+              "tipo": "tabla",
+              "id": "b1",
+              "clase": "estado",
+              "columnas": [
+                {
+                  "id": "c0",
+                  "titulo": "Repositorio",
+                  "ancho_mm": 60,
+                  "tipo": "identificador"
+                },
+                {
+                  "id": "c1",
+                  "titulo": "DEV",
+                  "ancho_mm": 30,
+                  "tipo": "identificador"
+                },
+                {
+                  "id": "c2",
+                  "titulo": "PRE",
+                  "ancho_mm": 30,
+                  "tipo": "identificador"
+                },
+                {
+                  "id": "c3",
+                  "titulo": "PRO",
+                  "ancho_mm": 30,
+                  "tipo": "identificador"
+                }
+              ],
+              "filas": [
+                {
+                  "id": "f1",
+                  "celdas": {
+                    "c0": "",
+                    "c1": "",
+                    "c2": "",
+                    "c3": ""
+                  }
+                }
+              ]
+            }
+          ],
+          "secciones": []
+        }
+      ]
+    },
+    {
+      "id": "arquitectura",
+      "titulo": "Arquitectura del arquitecto",
+      "bloques": [],
+      "secciones": []
+    },
+    {
+      "id": "cuentas",
+      "titulo": "Cuentas",
+      "bloques": [],
+      "secciones": []
+    },
+    {
+      "id": "flujo-trafico",
+      "titulo": "Flujo de tráfico",
+      "bloques": [],
+      "secciones": []
+    },
+    {
+      "id": "cadenas-acceso",
+      "titulo": "Cadenas de acceso",
+      "bloques": [],
+      "secciones": []
+    },
+    {
+      "id": "pendientes",
+      "titulo": "Pendientes",
+      "bloques": [],
+      "secciones": []
+    }
+  ],
+  "versiones_vigentes": {}
+}

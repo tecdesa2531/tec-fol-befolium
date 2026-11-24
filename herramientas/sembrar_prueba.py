@@ -20,7 +20,7 @@ def main():
     for nombre in documentos.DOCUMENTOS:
         shutil.copyfile(RAIZ / "pruebas" / "datos" / (nombre + ".json"), destino / (nombre + ".json"))
     print("Datos de prueba en %s" % destino)
-    print("Abre http://localhost:8765/visor/DEMOAP/general")
+    print("En Folium abre la aplicacion DEMOAP con una carpeta de trabajo cualquiera.")
 
 
 if __name__ == "__main__":

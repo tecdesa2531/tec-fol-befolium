@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Folium</title>
+<link rel="stylesheet" href="/folium.css">
+</head>
+<body>
+
+<header id="barra">
+  <span class="marca">Folium</span>
+  <span id="app-info" hidden></span>
+  <nav id="pestanas" hidden role="tablist" aria-label="Documentos de la aplicación">
+    <button type="button" role="tab" data-doc="general">General</button>
+    <button type="button" role="tab" data-doc="repositorio">Repositorio</button>
+    <button type="button" role="tab" data-doc="compartidos">Compartidos</button>
+  </nav>
+  <span class="relleno"></span>
+  <span id="acciones" hidden>
+    <button type="button" id="btn-recargar">Recargar</button>
+    <button type="button" id="btn-imprimir">Imprimir borrador</button>
+    <button type="button" id="btn-guardar" class="primario">Guardar versión</button>
+    <button type="button" id="btn-cerrar">Cerrar aplicación</button>
+  </span>
+</header>
+
+<main id="pantalla-abrir">
+  <h1>Abrir una aplicación</h1>
+  <form id="form-abrir">
+    <label>Tracking code
+      <input id="abrir-tracking" maxlength="6" required autocomplete="off" placeholder="Seis caracteres">
+    </label>
+    <label>Carpeta de la aplicación
+      <input id="abrir-carpeta" required autocomplete="off">
+    </label>
+    <p class="ayuda">Si la carpeta contiene <code>010_Infraestructura</code>, ese es el directorio de trabajo. Folium crea ahí <code>02_Documentacion</code>, <code>03_Diagramas</code> y <code>04_OperacionesManuales</code> si no existen, y no toca nada más.</p>
+    <p id="abrir-error" class="error" hidden></p>
+    <button type="submit" class="primario">Abrir</button>
+  </form>
+  <p class="ayuda">Referencia (desarrollo): <a href="/referencia/general">general</a> · <a href="/referencia/repositorio">repositorio</a> · <a href="/referencia/compartidos">compartidos</a></p>
+</main>
+
+<div id="cuerpo" hidden>
+  <aside id="panel-izq" hidden aria-label="Estructura y bloques">
+    <h2>Estructura</h2>
+  </aside>
+  <section id="centro">
+    <div id="aviso" hidden></div>
+    <iframe id="hoja" title="Documento en hojas A4" hidden></iframe>
+    <div id="mensaje" hidden></div>
+  </section>
+  <aside id="panel-der" hidden aria-label="Propiedades">
+    <h2>Propiedades</h2>
+  </aside>
+</div>
+
+<dialog id="dlg-guardar">
+  <h2>Guardar versión</h2>
+  <div id="guardar-contenido"></div>
+  <p id="guardar-error" class="error" hidden></p>
+  <div class="botones">
+    <button type="button" id="guardar-cancelar">Cerrar</button>
+    <button type="button" id="guardar-confirmar" class="primario">Guardar</button>
+  </div>
+</dialog>
+
+<script src="/folium.js"></script>
+</body>
+</html>

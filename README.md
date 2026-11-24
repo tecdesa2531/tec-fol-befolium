@@ -57,26 +57,32 @@ Contiene los HTML de referencia y los acuerdos. No se sube a git. Para probar la
 3. En Más ajustes, activa "Gráficos de fondo".
 4. Revisa fuentes, colores, portada y enlaces del índice.
 
-## Ver el visor con datos de prueba
+## Usar Folium
 
-```powershell
-python herramientas/sembrar_prueba.py
-python servidor.py
-```
+1. Ejecuta `python servidor.py` y abre `http://localhost:8765`.
+2. Escribe el tracking code (6 caracteres) y la carpeta de la aplicación. Si la carpeta contiene `010_Infraestructura`, ese es el directorio de trabajo. Folium crea `02_Documentacion`, `03_Diagramas` y `04_OperacionesManuales` si faltan, y recuerda la carpeta de cada tracking code.
+3. Si los documentos no existen, "Crear documentación" pide los datos de la portada y crea los tres con sus secciones vacías.
+4. Las pestañas General, Repositorio y Compartidos muestran las hojas A4. Si un documento tiene errores de validación, se listan en su pestaña.
+5. "Guardar versión" crea el HTML inmutable de cada documento que cambió, la carpeta `02_Documentacion/<versión del documento 1>/` y copia el último PDF de los que no cambiaron. Después, un botón por documento abre la impresión con el título igual al nombre del PDF. Elige "Guardar como PDF" (no "Microsoft Print to PDF") y activa "Gráficos de fondo".
 
-Abre `http://localhost:8765/visor/DEMOAP/general` (también `repositorio` y `compartidos`). Los datos son inventados y quedan en `temp_pruebas/`.
+En la Fase 1 los datos de `actual/` se corrigen a mano en los JSON y se pulsa "Recargar". La edición dentro de Folium llega en la Fase 2.
+
+Para probar con datos inventados: `python herramientas/sembrar_prueba.py`, y abre la aplicación `DEMOAP`.
 
 ## Pruebas
 
 ```powershell
 python pruebas/probar.py
+python pruebas/probar_aplicacion.py
 ```
 
 ## Estructura
 
 - `servidor.py`: servidor local.
+- `aplicacion.py`, `versiones.py`: aplicación activa, carpetas, creación de documentos y versiones.
 - `documentos.py`, `validacion.py`, `visor.py`: cargador, validación y generador del HTML A4.
-- `web/`: página de inicio, CSS y paginador.
+- `plantillas/`: documentos vacíos para "Crear documentación".
+- `web/`: interfaz (`folium.*`), CSS de las hojas y paginador.
 - `pruebas/`: pruebas y datos inventados.
 - `herramientas/`: scripts de apoyo.
 - `docs/formato_json.md`: formato de los tres documentos.

@@ -1,0 +1,123 @@
+{
+  "formato": 1,
+  "documento": "repositorio",
+  "aplicacion": "{aplicacion}",
+  "organizacion": "{organizacion}",
+  "titulo_pagina": "Repositorio de la aplicación",
+  "portada": [
+    {
+      "etiqueta": "Proyecto",
+      "valor": "{proyecto}"
+    },
+    {
+      "etiqueta": "Aplicación",
+      "valor": "{aplicacion}"
+    },
+    {
+      "etiqueta": "Tracking code",
+      "valor": "{tracking}"
+    },
+    {
+      "etiqueta": "Repositorio",
+      "valor": "{repositorio}"
+    },
+    {
+      "etiqueta": "Versión del documento",
+      "automatico": "version"
+    },
+    {
+      "etiqueta": "Responsable",
+      "valor": "{responsable}"
+    },
+    {
+      "etiqueta": "Última actualización",
+      "automatico": "fecha"
+    }
+  ],
+  "estados": [
+    {
+      "texto": "En uso",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Creado",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Aplicada",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Lectura",
+      "color": "ninguno"
+    },
+    {
+      "texto": "Solo observabilidad",
+      "color": "ninguno"
+    },
+    {
+      "texto": "No existe",
+      "color": "gris"
+    },
+    {
+      "texto": "No aplica",
+      "color": "gris"
+    },
+    {
+      "texto": "No usa",
+      "color": "gris"
+    },
+    {
+      "texto": "Pendiente",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Pendiente de confirmar",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Pendiente de registrar",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Sin uso",
+      "color": "amarillo"
+    },
+    {
+      "texto": "Sin acceso",
+      "color": "amarillo"
+    }
+  ],
+  "secciones": [
+    {
+      "id": "descripcion",
+      "titulo": "Descripción del repositorio",
+      "bloques": [],
+      "secciones": []
+    },
+    {
+      "id": "arquitectura",
+      "titulo": "Arquitectura del repositorio",
+      "bloques": [],
+      "secciones": []
+    },
+    {
+      "id": "inventario",
+      "titulo": "Inventario actual",
+      "bloques": [],
+      "secciones": []
+    },
+    {
+      "id": "diferencias",
+      "titulo": "Diferencias por ambiente",
+      "bloques": [],
+      "secciones": []
+    },
+    {
+      "id": "historial",
+      "titulo": "Historial de entregas",
+      "bloques": [],
+      "secciones": []
+    }
+  ]
+}
