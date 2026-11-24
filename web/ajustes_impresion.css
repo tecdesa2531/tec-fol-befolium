@@ -1,0 +1,6 @@
+/* Ajuste de Folium sobre el CSS comun de la referencia.
+   El degradado de la portada usa colores semitransparentes; en el PDF eso se
+   guarda como mascara de transparencia y el visor de PDF del navegador no la
+   dibuja. Se usan los mismos colores ya mezclados sobre blanco (opacos). */
+.cover .banner{
+  background:linear-gradient(180deg,#CCF7F2 0%,#E3F8FD 38%,#F5FCFE 72%,#FFFFFF 100%)}
