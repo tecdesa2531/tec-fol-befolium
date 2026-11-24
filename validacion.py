@@ -144,6 +144,12 @@ def validar(doc):
     def validar_tabla(t, donde):
         if t.get("clase") not in ("estado", "registro"):
             error(donde, "clase debe ser estado o registro")
+        nuevas = t.get("nuevas_filas")
+        if nuevas is not None:
+            if t.get("clase") != "registro":
+                error(donde, "nuevas_filas solo va en las tablas de registro")
+            elif nuevas not in ("arriba", "abajo"):
+                error(donde, "nuevas_filas debe ser arriba o abajo")
         columnas = t.get("columnas", [])
         if not columnas:
             error(donde, "La tabla no tiene columnas")

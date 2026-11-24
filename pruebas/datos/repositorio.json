@@ -198,7 +198,8 @@
                     "nota": "Existente"
                   }
                 }
-              ]
+              ],
+              "nuevas_filas": "arriba"
             }
           ],
           "secciones": []

@@ -65,6 +65,12 @@
   }
 
   /* ---------- pintar ---------- */
+  /* Espera a que no quede ningun repintado en curso (un cambio nuevo omite los anteriores). */
+  async function inactiva() {
+    let c;
+    do { c = cola; await c; } while (c !== cola);
+  }
+
   async function render(modelo) {
     const numero = ++secuencia;
     cola = cola.then(async () => {
@@ -78,7 +84,7 @@
       w.scrollTo(0, y);
       marcarSeleccion(F.Editor.seleccion, false);
     });
-    return cola;
+    await inactiva();
   }
 
   /* ---------- seleccion ---------- */
@@ -86,6 +92,8 @@
     if (!sel) return null;
     if (sel.tipo === "seccion") return "s:" + sel.id;
     if (sel.tipo === "bloque") return "b:" + sel.sid + ":" + sel.bid;
+    if (sel.tipo === "celda") return "c:" + sel.sid + ":" + sel.bid + ":" + sel.fid + ":" + sel.cid;
+    if (sel.tipo === "columna") return "h:" + sel.sid + ":" + sel.bid + ":" + sel.cid;
     return null;
   }
 
@@ -100,6 +108,10 @@
     if (!elementos.length) return;
     elementos.forEach((e) => e.classList.add("f-sel"));
     if (sel.tipo === "bloque") ponerAsa(elementos[0], sel);
+    else if (sel.tipo === "celda" || sel.tipo === "columna") {     // el asa mueve la tabla entera
+      const tabla = elementoDe("b:" + sel.sid + ":" + sel.bid);
+      if (tabla) ponerAsa(tabla, sel);
+    }
     if (desplazar) elementos[0].scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
@@ -109,6 +121,7 @@
     const w = ventana();
     const r = elemento.getBoundingClientRect();
     const c = elemento.closest(".content").getBoundingClientRect();
+    if (sel.tipo === "celda" || sel.tipo === "columna") sel = { sid: sel.sid, bid: sel.bid };
     const asa = d.createElement("div");
     asa.className = "f-asa";
     asa.draggable = true;
@@ -122,7 +135,8 @@
 
   /* ---------- edicion de texto en la hoja ----------
      Se edita el texto con su sintaxis (`codigo`, **negrita**, [texto](url)), sin numeros.
-     Enter confirma, Mayus+Enter agrega un salto de linea, Esc cancela. */
+     Enter confirma, Mayus+Enter agrega un salto de linea, Esc cancela; en una celda, Tab y
+     Mayus+Tab confirman y pasan a la celda siguiente o anterior (alTerminar recibe la tecla). */
   function editarTexto(ref, textoCrudo, alTerminar) {
     const h = elementoDe(ref);
     if (!h) return;
@@ -138,18 +152,19 @@
     sel.removeAllRanges();
     sel.addRange(rango);
     let terminado = false;
-    const terminar = (confirmar) => {
+    const terminar = (confirmar, tecla) => {
       if (terminado) return;
       terminado = true;
       const texto = h.textContent.replace(/\r/g, "").replace(/^\n+|\n+$/g, "");
       h.contentEditable = "false";
       h.classList.remove("f-editando");
       h.style.whiteSpace = "";
-      alTerminar(confirmar ? texto : null);
+      alTerminar(confirmar ? texto : null, tecla || null);
     };
     h.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); terminar(true); }
       else if (ev.key === "Escape") { ev.preventDefault(); terminar(false); }
+      else if (ev.key === "Tab" && /^(TD|TH)$/.test(h.tagName)) { ev.preventDefault(); terminar(true, ev.shiftKey ? "atras" : "adelante"); }
       ev.stopPropagation();
     });
     h.addEventListener("blur", () => terminar(true));
@@ -161,6 +176,14 @@
 
   function editarBloque(sid, bid, textoCrudo) {
     editarTexto("b:" + sid + ":" + bid, textoCrudo, (texto) => F.Editor.texto(sid, bid, texto));
+  }
+
+  function editarCelda(sid, bid, fid, cid, textoCrudo) {
+    editarTexto("c:" + [sid, bid, fid, cid].join(":"), textoCrudo, (texto, tecla) => F.Tablas.terminarCelda(sid, bid, fid, cid, texto, tecla));
+  }
+
+  function editarEncabezado(sid, bid, cid, textoCrudo) {
+    editarTexto("h:" + [sid, bid, cid].join(":"), textoCrudo, (texto, tecla) => F.Tablas.terminarEncabezado(sid, bid, cid, texto, tecla));
   }
 
   /* ---------- soltar encima de la hoja ----------
@@ -239,6 +262,8 @@
     marcarSeleccion: marcarSeleccion,
     editarTitulo: editarTitulo,
     editarBloque: editarBloque,
+    editarCelda: editarCelda,
+    editarEncabezado: editarEncabezado,
     ocultarLinea: ocultarLinea,
     enfocar: () => { if (marcoListo) ventana().focus(); },
   };

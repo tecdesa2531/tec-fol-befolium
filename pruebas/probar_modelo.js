@@ -189,4 +189,60 @@ prueba("bloques: texto, tipo y con_siguiente", () => {
   assert.strictEqual(m.bloqueDe("a", "b1").bloque.texto, "nuevo texto");
 });
 
+prueba("tablas: crear, columnas con reparto a 150 mm y celdas", () => {
+  const m = new Modelo("general", doc());
+  const t = m.agregarTabla("b", null);
+  assert.strictEqual(m.sumaAnchos("b", t), 150);
+  const c4 = m.agregarColumna("b", t, null);
+  assert.strictEqual(c4, "c4");
+  assert.strictEqual(m.sumaAnchos("b", t), 150);
+  m.propiedadColumna("b", t, "c1", "ancho_mm", 10);
+  assert.notStrictEqual(m.sumaAnchos("b", t), 150);             // editar un ancho no reparte
+  m.ajustarAnchos("b", t);
+  assert.strictEqual(m.sumaAnchos("b", t), 150);
+  m.celdaTexto("b", t, "f1", "c2", "hola");
+  assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c2, "hola");        // texto simple
+  m.celdaPropiedad("b", t, "f1", "c2", "color", "amarillo");
+  assert.deepStrictEqual(m.tablaDe("b", t).filas[0].celdas.c2, { texto: "hola", color: "amarillo" });
+  m.celdaLineas("b", t, "f1", "c2", ["una", "", "dos"]);
+  assert.deepStrictEqual(m.tablaDe("b", t).filas[0].celdas.c2.lineas, ["una", "dos"]);
+  m.celdaPropiedad("b", t, "f1", "c2", "color", "");
+  m.celdaLineas("b", t, "f1", "c2", []);
+  assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c2, "hola");        // vuelve a texto simple
+  assert.strictEqual(m.contenidoColumna("b", t, "c2"), 1);
+  m.quitarColumna("b", t, "c2");
+  assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c2, undefined);
+  assert.strictEqual(m.sumaAnchos("b", t), 150);
+  assert.throws(() => m.propiedadColumna("b", t, "c1", "ancho_mm", 0), /mayor/);
+});
+
+prueba("tablas: la ultima columna no se quita; mover columnas y filas", () => {
+  const m = new Modelo("general", doc());
+  const t = m.agregarTabla("b", null);
+  m.moverColumna("b", t, "c1", 1);
+  assert.deepStrictEqual(m.tablaDe("b", t).columnas.map((c) => c.id), ["c2", "c1", "c3"]);
+  assert.throws(() => m.moverColumna("b", t, "c3", 1), /extremo/);
+  m.quitarColumna("b", t, "c1"); m.quitarColumna("b", t, "c2");
+  assert.throws(() => m.quitarColumna("b", t, "c3"), /al menos una/);
+  const f2 = m.agregarFila("b", t, null);
+  assert.strictEqual(f2, "f2");
+  m.moverFila("b", t, "f2", -1);
+  assert.deepStrictEqual(m.tablaDe("b", t).filas.map((f) => f.id), ["f2", "f1"]);
+});
+
+prueba("tablas de registro: filas nuevas arriba o abajo", () => {
+  const m = new Modelo("general", doc());
+  const t = m.agregarTabla("b", null);
+  assert.throws(() => m.tablaNuevasFilas("b", t, "arriba"), /registro/);
+  m.tablaClase("b", t, "registro");
+  assert.strictEqual(m.tablaDe("b", t).nuevas_filas, "abajo");
+  assert.strictEqual(m.agregarFila("b", t, null), "f2");
+  assert.deepStrictEqual(m.tablaDe("b", t).filas.map((f) => f.id), ["f1", "f2"]);
+  m.tablaNuevasFilas("b", t, "arriba");
+  assert.strictEqual(m.agregarFila("b", t, null), "f3");
+  assert.deepStrictEqual(m.tablaDe("b", t).filas.map((f) => f.id), ["f3", "f1", "f2"]);
+  m.tablaClase("b", t, "estado");
+  assert.strictEqual(m.tablaDe("b", t).nuevas_filas, undefined);
+});
+
 console.log("\n" + pruebas + " pruebas del modelo correctas");

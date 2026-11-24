@@ -95,7 +95,7 @@ Imagen:
 ```
 
 - `clase`: `estado` (solo lo vigente) o `registro` (acumula filas).
-- `nuevas_filas` (solo en `registro`): `arriba` (la más reciente primero, como los scripts y cargas) o `abajo` (al final, como las entregas y los secretos). Borrar una fila de una tabla de registro pide confirmación. *(Se implementa en el paso 3 de la Fase 2.)*
+- `nuevas_filas` (solo en `registro`): `arriba` (la más reciente primero, como los scripts y cargas) o `abajo` (al final, como las entregas y los secretos). Borrar una fila de una tabla de registro pide confirmación.
 - Los anchos suman **150 mm**; si no, Folium avisa y no deja guardar la versión.
 - Tipo de columna = estilo por defecto de sus celdas:
   - `texto`: Georgia 8 pt.

@@ -270,6 +270,32 @@ class PruebasImagenYTablas(Base):
             {"tipo": "imagen", "id": "b1", "alto_mm": 50, "archivo": "../secreto.png"})
         self.assertTrue(any("sin rutas" in p["mensaje"] for p in validacion.validar(gen)))
 
+    def test_orden_de_filas_de_las_tablas_de_registro(self):
+        self.crear_todo()
+        comp = self.leer("compartidos")
+        om = [s for s in comp["secciones"] if s["id"] == "operaciones-manuales"][0]["secciones"]
+        clases = {s["id"]: (s["bloques"][0]["clase"], s["bloques"][0].get("nuevas_filas")) for s in om}
+        self.assertEqual(clases["om-scripts"], ("registro", "arriba"))
+        self.assertEqual(clases["om-entregas"], ("registro", "abajo"))
+        self.assertEqual(clases["om-secretos"], ("registro", "abajo"))
+        self.assertEqual(clases["om-usuarios"], ("estado", None))
+        self.assertEqual(clases["om-credenciales"], ("estado", None))
+
+    def test_validacion_de_nuevas_filas(self):
+        comp = documentos.cargar_documento(RAIZ / "pruebas" / "datos" / "repositorio.json")
+
+        def errores(doc):
+            return [p["mensaje"] for p in validacion.validar(doc) if p["nivel"] == "error"]
+
+        tabla = comp["secciones"][1]["secciones"][0]["bloques"][0]
+        self.assertEqual(tabla["clase"], "registro")
+        self.assertEqual(errores(comp), [])
+        tabla["nuevas_filas"] = "al medio"
+        self.assertTrue(any("arriba o abajo" in m for m in errores(comp)))
+        tabla["clase"] = "estado"
+        tabla["nuevas_filas"] = "abajo"
+        self.assertTrue(any("solo va en las tablas de registro" in m for m in errores(comp)))
+
     def test_tabla_sin_filas(self):
         self.crear_todo()
         pagina = visor.generar_html(self.leer("compartidos"))

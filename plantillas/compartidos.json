@@ -168,7 +168,8 @@
                   "tipo": "texto"
                 }
               ],
-              "filas": []
+              "filas": [],
+              "nuevas_filas": "arriba"
             }
           ],
           "secciones": []
@@ -180,7 +181,7 @@
             {
               "tipo": "tabla",
               "id": "b1",
-              "clase": "registro",
+              "clase": "estado",
               "columnas": [
                 {
                   "id": "c0",
@@ -237,7 +238,7 @@
             {
               "tipo": "tabla",
               "id": "b1",
-              "clase": "registro",
+              "clase": "estado",
               "columnas": [
                 {
                   "id": "c0",
@@ -321,7 +322,8 @@
                   "tipo": "identificador"
                 }
               ],
-              "filas": []
+              "filas": [],
+              "nuevas_filas": "abajo"
             }
           ],
           "secciones": []
@@ -372,7 +374,8 @@
                   "tipo": "identificador"
                 }
               ],
-              "filas": []
+              "filas": [],
+              "nuevas_filas": "abajo"
             }
           ],
           "secciones": []

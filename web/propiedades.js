@@ -4,6 +4,8 @@
 
   const el = F.el;
 
+  function encabezado(texto) { return el("h3", { class: "subtitulo primero", texto: texto }); }
+
   function campo(etiqueta, contenido) {
     return el("div", { class: "campo" }, [el("label", { texto: etiqueta }), contenido]);
   }
@@ -16,6 +18,8 @@
     pintarHistorial();
     if (!modelo) return;
     if (sel && sel.tipo === "bloque" && modelo.bloqueDe(sel.sid, sel.bid)) { pintarBloque(cont, modelo, sel); return; }
+    if (sel && sel.tipo === "celda") { cont.appendChild(encabezado("Celda")); F.Tablas.pintarCelda(cont, modelo, sel); return; }
+    if (sel && sel.tipo === "columna") { cont.appendChild(encabezado("Columna")); F.Tablas.pintarColumna(cont, modelo, sel); return; }
     if (!sel || sel.tipo !== "seccion" || !modelo.buscar(sel.id)) {
       cont.appendChild(el("p", { class: "ayuda", texto: "Selecciona una sección o un bloque, en la estructura o en la hoja, para ver sus propiedades." }));
       return;
@@ -90,6 +94,10 @@
       texto.addEventListener("keydown", (ev) => ev.stopPropagation());
       cont.appendChild(campo("Texto", texto));
       cont.appendChild(el("p", { class: "ayuda", texto: "Admite `código`, **negrita** y [texto](url). En una nota destacada, una línea en blanco separa párrafos. También puedes editarlo directamente en la hoja con doble clic." }));
+    } else if (b.tipo === "tabla") {
+      cont.appendChild(encabezado("Tabla"));
+      F.Tablas.pintarTabla(cont, modelo, sel);
+      return;
     } else {
       cont.appendChild(campo("Tipo de bloque", el("code", { texto: NOMBRES_TIPO[b.tipo] || b.tipo })));
       cont.appendChild(el("p", { class: "ayuda", texto: "Este tipo de bloque se edita en un paso posterior; por ahora puedes moverlo, duplicarlo o quitarlo." }));
@@ -119,5 +127,5 @@
     document.getElementById("btn-rehacer").disabled = !m || !m.puedeRehacer();
   }
 
-  F.Propiedades = { pintar: pintar, pintarHistorial: pintarHistorial };
+  F.Propiedades = { pintar: pintar, pintarHistorial: pintarHistorial, campo: campo };
 })(window.Folium = window.Folium || {});

@@ -13,7 +13,7 @@
     ["nota", "Nota", true],
     ["nota_destacada", "Nota destacada", true],
     ["etiqueta", "Etiqueta", true],
-    ["tabla", "Tabla", false],
+    ["tabla", "Tabla", true],
     ["imagen", "Imagen", false],
   ];
 

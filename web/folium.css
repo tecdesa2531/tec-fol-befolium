@@ -163,3 +163,18 @@ button.peligro{color:var(--error);border-color:#E6B8B4}
 #aviso.con-errores{background:var(--error-claro)}
 #aviso-flotante{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:100;max-width:min(520px,90vw);
   padding:10px 16px;background:var(--panel);color:var(--texto);border-radius:var(--radio);box-shadow:var(--sombra-dialogo);font-size:13px}
+
+/* tablas en el panel de propiedades */
+#props h3.subtitulo{font-size:12px;font-weight:600;color:var(--suave);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px}
+#props h3.subtitulo.primero{margin-top:0;font-size:14px;color:var(--texto);text-transform:none;letter-spacing:0}
+#props .tarjeta{padding:10px;margin-bottom:8px;border:1px solid var(--linea);border-radius:var(--radio)}
+#props .tarjeta>input{margin-bottom:6px}
+#props .fila-columna{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+#props .fila-columna select{flex:1;min-width:0}
+#props .fila-columna input{width:68px}
+#props .fila-linea{display:flex;gap:6px;margin-bottom:6px}
+#props input[type="number"],#props input[type="text"]{padding:6px 8px;font:inherit;border:1px solid var(--linea-fuerte);border-radius:6px}
+#props .tarjeta>input{width:100%}
+#props .unidad,#props .suma{font-size:12px;color:var(--suave)}
+#props .suma.mal{color:var(--error);font-weight:600}
+#props .suma.bien{color:var(--suave)}

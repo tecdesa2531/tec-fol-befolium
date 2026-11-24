@@ -8,9 +8,9 @@
   const E = F.Editor = {
     modelos: {},            // nombre del documento -> Modelo (cada uno con su historial)
     activo: null,
-    seleccion: null,        // { tipo: "seccion", id } o { tipo: "bloque", sid, bid }
+    seleccion: null,        // { tipo: "seccion", id } | { tipo: "bloque", sid, bid } | { tipo: "celda", sid, bid, fid, cid } | { tipo: "columna", sid, bid, cid }
     origenArrastrado: null,
-    pendienteEditar: null,  // { seccion: id } o { bloque: [sid, bid] }: se edita al terminar de pintar
+    pendienteEditar: null,  // { seccion } | { bloque: [sid, bid] } | { celda: [sid, bid, fid, cid] } | { columna: [sid, bid, cid] }
   };
 
   let temporizadores = {};
@@ -58,7 +58,13 @@
   function seleccionExiste(m) {
     const s = E.seleccion;
     if (!s) return true;
-    return s.tipo === "seccion" ? !!m.buscar(s.id) : !!m.bloqueDe(s.sid, s.bid);
+    if (s.tipo === "seccion") return !!m.buscar(s.id);
+    if (s.tipo === "bloque") return !!m.bloqueDe(s.sid, s.bid);
+    try {
+      if (s.tipo === "celda") { m.valorCelda(s.sid, s.bid, s.fid, s.cid); m.columnaDe(s.sid, s.bid, s.cid); }
+      else m.columnaDe(s.sid, s.bid, s.cid);
+      return true;
+    } catch (err) { return false; }
   }
 
   async function alCambiarModelo(m) {
@@ -73,16 +79,33 @@
       F.avisar(e.message);
       return;
     }
+    procesarPendiente(m);
+  }
+
+  /* Empieza a editar lo que quedo pendiente (un titulo, texto, celda o encabezado nuevo). */
+  function procesarPendiente(m) {
     const p = E.pendienteEditar;
     E.pendienteEditar = null;
-    if (p && p.seccion && m.buscar(p.seccion)) {
-      F.Hoja.marcarSeleccion({ tipo: "seccion", id: p.seccion }, true);
-      F.Hoja.editarTitulo(p.seccion, m.buscar(p.seccion).sec.titulo);
-    } else if (p && p.bloque && m.bloqueDe(p.bloque[0], p.bloque[1])) {
-      F.Hoja.marcarSeleccion({ tipo: "bloque", sid: p.bloque[0], bid: p.bloque[1] }, true);
-      F.Hoja.editarBloque(p.bloque[0], p.bloque[1], m.bloqueDe(p.bloque[0], p.bloque[1]).bloque.texto);
-    }
+    if (!p) return;
+    try {
+      if (p.seccion && m.buscar(p.seccion)) {
+        F.Hoja.marcarSeleccion({ tipo: "seccion", id: p.seccion }, true);
+        F.Hoja.editarTitulo(p.seccion, m.buscar(p.seccion).sec.titulo);
+      } else if (p.bloque && m.bloqueDe(p.bloque[0], p.bloque[1])) {
+        F.Hoja.marcarSeleccion({ tipo: "bloque", sid: p.bloque[0], bid: p.bloque[1] }, true);
+        F.Hoja.editarBloque(p.bloque[0], p.bloque[1], m.bloqueDe(p.bloque[0], p.bloque[1]).bloque.texto);
+      } else if (p.celda) {
+        const [sid, bid, fid, cid] = p.celda;
+        E.seleccionar({ tipo: "celda", sid: sid, bid: bid, fid: fid, cid: cid }, true);
+        F.Hoja.editarCelda(sid, bid, fid, cid, m.valorCelda(sid, bid, fid, cid).texto);
+      } else if (p.columna) {
+        const [sid, bid, cid] = p.columna;
+        E.seleccionar({ tipo: "columna", sid: sid, bid: bid, cid: cid }, true);
+        F.Hoja.editarEncabezado(sid, bid, cid, m.columnaDe(sid, bid, cid).c.titulo);
+      }
+    } catch (err) { /* lo pendiente ya no existe */ }
   }
+  E.procesarPendiente = procesarPendiente;
 
   function estadoGuardado(texto, error) {
     const p = document.getElementById("guardado");
@@ -139,6 +162,8 @@
     if (!ref) { E.seleccionar(null); return; }
     const p = ref.split(":");
     if (p[0] === "s") E.seleccionar({ tipo: "seccion", id: p.slice(1).join(":") });
+    else if (p[0] === "c") E.seleccionar({ tipo: "celda", sid: p[1], bid: p[2], fid: p[3], cid: p[4] });
+    else if (p[0] === "h") E.seleccionar({ tipo: "columna", sid: p[1], bid: p[2], cid: p[3] });
     else if (p.length >= 3) E.seleccionar({ tipo: "bloque", sid: p[1], bid: p[2] });
   };
 
@@ -150,6 +175,10 @@
       F.Hoja.editarTitulo(id, E.modelo().buscar(id).sec.titulo);
     } else if (p[0] === "b") {
       E.editarBloque(p[1], p[2]);
+    } else if (p[0] === "c") {
+      F.Tablas.editarCelda(p[1], p[2], p[3], p[4]);
+    } else if (p[0] === "h") {
+      F.Tablas.editarEncabezado(p[1], p[2], p[3]);
     }
   };
 
@@ -214,12 +243,14 @@
   };
 
   function colocarBloque(m, sid, indice, tipo) {
-    const bid = intentar(() => m.agregarBloque(sid, indice, tipo));
+    const esTabla = tipo === "tabla";
+    const bid = intentar(() => (esTabla ? m.agregarTabla(sid, indice) : m.agregarBloque(sid, indice, tipo)));
     if (!bid) return;
     E.seleccion = { tipo: "bloque", sid: sid, bid: bid };
-    E.pendienteEditar = { bloque: [sid, bid] };
+    if (!esTabla) E.pendienteEditar = { bloque: [sid, bid] };        // una tabla nueva solo se selecciona
     F.Arbol.pintar();
     F.Propiedades.pintar();
+    if (esTabla) F.Hoja.marcarSeleccion(E.seleccion, true);
   }
 
   E.duplicarSeccion = function (id) {
@@ -254,6 +285,9 @@
 
   E.cambiarNivel = (id, dir) => { intentar(() => E.modelo().cambiarNivel(id, dir)); };
   E.marcarSeccion = (id, campo, valor) => { intentar(() => E.modelo().marcarSeccion(id, campo, valor)); };
+
+  /* Aplica un cambio del modelo con aviso de errores; la seleccion se conserva. */
+  E.conSeleccion = function (fn) { return intentar(fn); };
 
   E.deshacer = function () { const m = E.modelo(); if (m) m.deshacer(); };
   E.rehacer = function () { const m = E.modelo(); if (m) m.rehacer(); };
@@ -310,13 +344,20 @@
     else if (ctrl && (k === "y" || (k === "z" && ev.shiftKey))) { ev.preventDefault(); E.rehacer(); }
     else if (k === "escape") E.seleccionar(null);
     else if (k === "enter" && s && s.tipo === "bloque") { ev.preventDefault(); E.editarBloque(s.sid, s.bid); }
+    else if (k === "enter" && s && s.tipo === "celda") { ev.preventDefault(); F.Tablas.editarCelda(s.sid, s.bid, s.fid, s.cid); }
+    else if (k === "enter" && s && s.tipo === "columna") { ev.preventDefault(); F.Tablas.editarEncabezado(s.sid, s.bid, s.cid); }
+    else if ((k === "delete" || k === "supr") && s && s.tipo === "celda") {
+      ev.preventDefault();
+      F.Tablas.vaciarCelda(s);
+    }
     else if (k === "enter" && s && s.tipo === "seccion") {
       ev.preventDefault();
       F.Hoja.editarTitulo(s.id, E.modelo().buscar(s.id).sec.titulo);
     }
     else if ((k === "delete" || k === "supr") && s) {
       ev.preventDefault();
-      if (s.tipo === "seccion") E.quitarSeccion(s.id); else E.quitarBloque(s.sid, s.bid);
+      if (s.tipo === "seccion") E.quitarSeccion(s.id);
+      else if (s.tipo === "bloque") E.quitarBloque(s.sid, s.bid);
     }
   };
 
