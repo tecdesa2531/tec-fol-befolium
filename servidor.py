@@ -25,6 +25,7 @@ LIMITE_CUERPO = 1024 * 1024
 ESTATICOS = {
     "/": ("web/folium.html", "text/html; charset=utf-8"),
     "/folium.js": ("web/folium.js", "text/javascript; charset=utf-8"),
+    "/folium.svg": ("web/folium.svg", "image/svg+xml"),
     "/folium.css": ("web/folium.css", "text/css; charset=utf-8"),
     "/ajustes_impresion.css": ("web/ajustes_impresion.css", "text/css; charset=utf-8"),
 }

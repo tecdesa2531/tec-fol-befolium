@@ -40,6 +40,8 @@ button svg{width:16px;height:16px;flex:none}
   min-height:52px;padding:0 18px 2px;background:var(--panel)}
 #barra::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--degradado)}
 #barra .marca{font-weight:600;font-size:16px;letter-spacing:.2px;white-space:nowrap}
+#barra .marca{display:flex;align-items:center;gap:8px}
+#barra .marca img{height:20px;width:auto}
 #app-info{font-weight:400;color:var(--suave)}
 #acciones{display:flex;gap:8px;justify-content:flex-end;align-items:center}
 #acciones .menu{position:relative}
