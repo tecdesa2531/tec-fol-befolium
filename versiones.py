@@ -1,8 +1,11 @@
 """Versiones guardadas: nombres, siguiente version, deteccion de cambios y guardado."""
 import copy
 import datetime
+import hashlib
+import json
 import re
 import shutil
+from pathlib import Path
 
 import documentos
 import validacion
@@ -85,12 +88,53 @@ def sin_vigentes(doc):
     return copia
 
 
+def imagenes_de(doc):
+    """Nombres de archivo de las imagenes que usa un documento."""
+    nombres = set()
+
+    def recorrer(secciones):
+        for s in secciones:
+            for b in s.get("bloques", []):
+                if b.get("tipo") == "imagen" and b.get("archivo"):
+                    nombres.add(Path(b["archivo"]).name)
+            recorrer(s.get("secciones", []))
+
+    recorrer(doc.get("secciones", []))
+    return sorted(nombres)
+
+
+def hashes_imagenes(app, doc):
+    """{archivo: sha256 del contenido, o None si falta}. Detecta cambios por contenido."""
+    res = {}
+    for nombre in imagenes_de(doc):
+        ruta = app.actual / "imagenes" / nombre
+        res[nombre] = hashlib.sha256(ruta.read_bytes()).hexdigest() if ruta.is_file() else None
+    return res
+
+
+def ruta_hashes(app, doc, version):
+    return app.versiones(doc) / (nombre_base(app, doc, version) + ".imagenes.json")
+
+
+def hashes_guardados(app, doc, version):
+    try:
+        return json.loads(ruta_hashes(app, doc, version).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def difiere_de_guardada(app, d, doc, version, con_vigentes=False):
+    """Compara un documento (y sus imagenes, por contenido) con una version guardada."""
+    guardada = cargar_guardada(app, d, version)
+    if not con_vigentes:
+        doc, guardada = sin_vigentes(doc), sin_vigentes(guardada)
+    return doc != guardada or hashes_imagenes(app, doc) != hashes_guardados(app, d, version)
+
+
 def cambio_propio(app, doc, actual):
     """True si el contenido difiere de la ultima version guardada (o no hay ninguna)."""
     v = ultima(app, doc)
-    if v is None:
-        return True
-    return sin_vigentes(actual) != sin_vigentes(cargar_guardada(app, doc, v))
+    return v is None or difiere_de_guardada(app, doc, actual, v)
 
 
 def errores_por_documento(actuales):
@@ -158,7 +202,7 @@ def guardar_version(app, pedidas, hoy=None):
     general["versiones_vigentes"] = vigentes
     anterior = ultimas["general"]
     cambia["general"] = (anterior is None
-                         or general != cargar_guardada(app, "general", anterior))
+                         or difiere_de_guardada(app, "general", general, anterior, con_vigentes=True))
     if not any(cambia.values()):
         raise ValueError("No hay cambios que guardar.")
     if not cambia["general"]:
@@ -174,7 +218,7 @@ def guardar_version(app, pedidas, hoy=None):
     docs_finales = dict(actuales, general=general)
     for d, v in nuevas.items():
         base = nombre_base(app, d, v)
-        for ext in (".html", ".json"):
+        for ext in (".html", ".json", ".imagenes.json"):
             if (app.versiones(d) / (base + ext)).exists():
                 raise ValueError("Ya existe la versión %s de %s." % (v, d))
 
@@ -186,6 +230,8 @@ def guardar_version(app, pedidas, hoy=None):
                                     carpeta_actual=app.actual, tokens=tokens_de(app, vigentes))
         (app.versiones(d) / (base + ".html")).write_text(pagina, encoding="utf-8", newline="\n")
         documentos.guardar_documento(app.versiones(d) / (base + ".json"), docs_finales[d])
+        ruta_hashes(app, d, v).write_text(
+            json.dumps(hashes_imagenes(app, docs_finales[d]), indent=2) + "\n", encoding="utf-8", newline="\n")
     documentos.guardar_documento(app.actual / "general.json", general)
 
     carpeta_pdf.mkdir()

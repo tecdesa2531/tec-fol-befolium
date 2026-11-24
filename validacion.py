@@ -4,6 +4,7 @@ Cada problema es un diccionario: nivel ("error" o "advertencia"), donde, mensaje
 Solo los errores impiden guardar una version.
 """
 import re
+from pathlib import Path
 
 from documentos import DOCUMENTOS
 
@@ -128,6 +129,9 @@ def validar(doc):
             elif tipo == "imagen":
                 if not b.get("alto_mm"):
                     error(donde, "Falta alto_mm")
+                archivo = b.get("archivo") or ""
+                if archivo and (archivo != Path(archivo).name or "\\" in archivo):
+                    error(donde, "archivo debe ser solo el nombre del archivo de imagen, sin rutas")
             else:
                 if not isinstance(b.get("texto"), str):
                     error(donde, "Falta el texto")

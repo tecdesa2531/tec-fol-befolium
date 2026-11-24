@@ -183,5 +183,59 @@ class PruebasVersiones(Base):
             versiones.guardar_version(self.app, {"repositorio": "20260105-v01"}, DIA1)
 
 
+class PruebasImagenYTablas(Base):
+    def poner_imagen(self, contenido):
+        (self.app.actual / "imagenes").mkdir(exist_ok=True)
+        (self.app.actual / "imagenes" / "diagrama.png").write_bytes(contenido)
+
+    def test_cambio_de_imagen_por_contenido(self):
+        self.crear_todo()
+        gen = self.leer("general")
+        gen["secciones"][0]["bloques"].append(
+            {"tipo": "imagen", "id": "b1", "alto_mm": 50, "archivo": "diagrama.png"})
+        self.escribir("general", gen)
+        self.poner_imagen(b"contenido uno")
+        versiones.guardar_version(self.app, {"repositorio": "0.1.0"}, DIA1)
+        self.assertFalse(versiones.cambio_propio(self.app, "general", self.leer("general")))
+        self.poner_imagen(b"contenido dos")           # mismo nombre, otro contenido
+        self.assertTrue(versiones.cambio_propio(self.app, "general", self.leer("general")))
+        r = versiones.guardar_version(self.app, {}, DIA2)
+        self.assertEqual(r["version_general"], "20260106-v01")
+        self.assertEqual([i["documento"] for i in r["imprimir"]], ["general"])
+
+    def test_imagen_incrustada_en_la_version(self):
+        self.crear_todo()
+        gen = self.leer("general")
+        gen["secciones"][0]["bloques"].append(
+            {"tipo": "imagen", "id": "b1", "alto_mm": 50, "archivo": "diagrama.png"})
+        self.escribir("general", gen)
+        self.poner_imagen(b"\x89PNG inventado")
+        versiones.guardar_version(self.app, {"repositorio": "0.1.0"}, DIA1)
+        pagina = (self.app.versiones("general") / "20260105_demoap_general-v01.html").read_text(encoding="utf-8")
+        self.assertIn("data:image/png;base64,", pagina)
+
+    def test_archivo_de_imagen_sin_rutas(self):
+        self.crear_todo()
+        gen = self.leer("general")
+        gen["secciones"][0]["bloques"].append(
+            {"tipo": "imagen", "id": "b1", "alto_mm": 50, "archivo": "../secreto.png"})
+        self.assertTrue(any("sin rutas" in p["mensaje"] for p in validacion.validar(gen)))
+
+    def test_tabla_sin_filas(self):
+        self.crear_todo()
+        pagina = visor.generar_html(self.leer("compartidos"))
+        self.assertIn('<td class="sinreg" colspan="5">Sin registros</td>', pagina)
+
+
+class PruebasServidor(unittest.TestCase):
+    def test_escucha_solo_en_local(self):
+        import servidor
+        s = servidor.crear_servidor(0)
+        try:
+            self.assertEqual(s.server_address[0], "127.0.0.1")
+        finally:
+            s.server_close()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

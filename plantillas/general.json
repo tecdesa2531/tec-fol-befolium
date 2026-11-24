@@ -194,17 +194,7 @@
                   "tipo": "identificador"
                 }
               ],
-              "filas": [
-                {
-                  "id": "f1",
-                  "celdas": {
-                    "c0": "",
-                    "c1": "",
-                    "c2": "",
-                    "c3": ""
-                  }
-                }
-              ]
+              "filas": []
             }
           ],
           "secciones": []

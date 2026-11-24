@@ -69,6 +69,7 @@
     msg.textContent = "";
     hoja.hidden = true;
     msg.hidden = true;
+    $("vista").hidden = true;
     $("btn-imprimir").disabled = true;
 
     if (info.error_lectura) {
@@ -93,6 +94,7 @@
       aviso.appendChild(listaProblemas(info.advertencias));
     }
     hoja.hidden = false;
+    $("vista").hidden = false;
     hoja.src = "/hoja/" + activo + "?t=" + Date.now();
     $("btn-imprimir").disabled = false;
   }
@@ -151,6 +153,18 @@
       if (r.carpeta) $("abrir-carpeta").value = r.carpeta;
     } catch (e) { /* sin carpeta recordada */ }
   });
+
+  /* ---------- controles de vista (zoom y margenes) sobre el iframe ---------- */
+  function aplicarVista() {
+    const w = $("hoja").contentWindow;
+    if (!w || !w.__done) { setTimeout(aplicarVista, 150); return; }
+    const d = w.document;
+    d.getElementById("pages").style.zoom = $("vista-zoom").value;
+    d.body.classList.toggle("guides", $("vista-margenes").checked);
+  }
+  $("hoja").addEventListener("load", aplicarVista);
+  $("vista-zoom").addEventListener("change", aplicarVista);
+  $("vista-margenes").addEventListener("change", aplicarVista);
 
   $("btn-cerrar").addEventListener("click", async () => { estado = await api("/api/cerrar", {}); pintar(); });
   $("btn-recargar").addEventListener("click", cargarEstado);

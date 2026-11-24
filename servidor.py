@@ -152,7 +152,7 @@ class Manejador(BaseHTTPRequestHandler):
             self.texto(422, "El documento tiene errores de validación.")
             return
         vigentes = {d: versiones.ultima(app, d) for d in ("repositorio", "compartidos")}
-        pagina = visor.generar_html(actual, carpeta_actual=app.actual,
+        pagina = visor.generar_html(actual, carpeta_actual=app.actual, vista=True,
                                     tokens=versiones.tokens_de(app, vigentes))
         self.responder(200, pagina.encode("utf-8"), "text/html; charset=utf-8")
 
@@ -204,11 +204,16 @@ class Manejador(BaseHTTPRequestHandler):
         print("%s %s" % (self.command, self.path))
 
 
+def crear_servidor(puerto):
+    """Servidor que escucha solo en el equipo local (127.0.0.1)."""
+    return HTTPServer(("127.0.0.1", puerto), Manejador)
+
+
 def main():
     trabajo, proceso = configuracion.directorios()
     print("Directorio de trabajo: %s" % trabajo)
     print("Directorio de proceso: %s" % proceso)
-    servidor = HTTPServer(("127.0.0.1", PUERTO), Manejador)
+    servidor = crear_servidor(PUERTO)
     print("Folium en http://localhost:%d  (Ctrl+C para salir)" % PUERTO)
     try:
         servidor.serve_forever()

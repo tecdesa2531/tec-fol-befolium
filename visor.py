@@ -50,7 +50,7 @@ def atributo_kwn(bloque):
 
 def html_imagen(b, carpeta):
     alto = b.get("alto_mm", 80)
-    archivo = b.get("archivo")
+    archivo = Path(b.get("archivo") or "").name      # solo el nombre: nunca rutas
     ruta = (Path(carpeta) / "imagenes" / archivo) if (archivo and carpeta) else None
     if ruta and ruta.is_file():
         tipo = mimetypes.guess_type(ruta.name)[0] or "image/png"
@@ -96,8 +96,9 @@ def html_tabla(b, estados):
     lineas.append(" <thead><tr>%s</tr></thead>"
                   % "".join("<th>%s</th>" % formato(c["titulo"]) for c in cols))
     lineas.append(" <tbody>")
-    filas = b.get("filas") or [{"celdas": {}}]    # una tabla sin filas muestra una fila vacia
-    for f in filas:
+    if not b.get("filas"):
+        lineas.append('  <tr><td class="sinreg" colspan="%d">Sin registros</td></tr>' % len(cols))
+    for f in b.get("filas", []):
         celdas = f.get("celdas", {})
         lineas.append("  <tr>%s</tr>"
                       % "".join(html_celda(celdas.get(c["id"]), c, estados) for c in cols))
@@ -163,7 +164,7 @@ PLANTILLA = """<!DOCTYPE html>
 </head>
 <body>
 
-<div class="bar">
+{estilo_vista}<div class="bar">
   <span><b>Folium</b> &nbsp;{barra} · Hojas A4</span>
   <span class="sp"></span>
   <label><input type="checkbox" id="g"> Ver márgenes (3 cm / 2,5 cm)</label>
@@ -198,8 +199,19 @@ def aplicar_tokens(doc, tokens):
     return json.loads(texto)
 
 
-def generar_html(doc, version=None, fecha=None, carpeta_actual=None, tokens=None):
-    """HTML completo. version=None significa borrador."""
+# Vista dentro de Folium: sin la barra de vista previa oscura y con el fondo claro de la
+# interfaz. No cambia las hojas ni la impresion.
+ESTILO_VISTA = """<style>
+html,body{background:#F0F1F5}
+.bar{display:none}
+#pages{padding-top:24px}
+@media screen{.page{box-shadow:0 1px 3px rgba(20,30,50,.10),0 6px 18px rgba(20,30,50,.10)}}
+</style>
+"""
+
+
+def generar_html(doc, version=None, fecha=None, carpeta_actual=None, tokens=None, vista=False):
+    """HTML completo. version=None significa borrador. vista=True es para el visor de Folium."""
     doc = aplicar_tokens(doc, tokens)
     cfg = configuracion(doc, version, fecha)
     cuerpo = []
@@ -208,6 +220,7 @@ def generar_html(doc, version=None, fecha=None, carpeta_actual=None, tokens=None
         titulo=html.escape("Folium · %s · %s" % (doc["aplicacion"], doc["titulo_pagina"]), quote=False),
         css=(WEB / "estilos.css").read_text(encoding="utf-8"),
         barra=html.escape(doc["titulo_pagina"], quote=False),
+        estilo_vista=ESTILO_VISTA if vista else "",
         cuerpo="\n".join(cuerpo),
         config=json.dumps(cfg, ensure_ascii=False).replace("</", "<\\/"),
         js=(WEB / "paginador.js").read_text(encoding="utf-8"))
