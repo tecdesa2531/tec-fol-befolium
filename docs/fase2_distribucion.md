@@ -53,7 +53,7 @@ Esquema funcional, sin estilos. El diseño visual va al final, con la maqueta de
 | Párrafo, nota, nota destacada, etiqueta | Tipo de bloque (se puede cambiar entre ellos) y "no separar del siguiente" |
 | Tabla | Clase (estado o registro); columnas con título, tipo y ancho en mm, y la suma "N de 150 mm" (en rojo si no es 150); agregar, quitar y ordenar columnas y filas |
 | Celda | Texto, estado (lista), color (automático, ninguno, amarillo o gris), tipo de la celda (igual que la columna, texto, identificador o estado) |
-| Imagen | Archivo, alto en mm, descripción y fuente `.drawio` |
+| Imagen | Elegir o reemplazar archivo (también Ctrl+V o arrastrar a la hoja), quitar imagen, alto en mm, descripción y fuente `.drawio` |
 
 ## Flujo 1: agregar una sección
 

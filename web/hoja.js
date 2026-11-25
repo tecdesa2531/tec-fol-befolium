@@ -41,6 +41,7 @@
       if (t) F.Editor.alDobleClic(t.dataset.ref);
     });
     d.addEventListener("keydown", (ev) => F.Editor.alTeclear(ev));
+    d.addEventListener("paste", (ev) => F.Editor.alPegar(ev));
     d.addEventListener("mousemove", alMover);
     d.addEventListener("mouseleave", quitarAuxiliares);
     d.addEventListener("pointerdown", (ev) => {
@@ -59,6 +60,7 @@
     d.addEventListener("dragover", (ev) => {
       const arrastrado = F.Editor.tipoArrastrado(ev.dataTransfer);
       if (!arrastrado) return;
+      if (arrastrado.clase === "archivo") ev.preventDefault();         // nunca abrir el archivo en el navegador
       const destino = destinoSoltar(ev, arrastrado);
       if (!destino) { ocultarLinea(); return; }
       ev.preventDefault();
@@ -71,7 +73,12 @@
       ev.preventDefault();
       const destino = destinoSoltar(ev, arrastrado);
       ocultarLinea();
+      if (destino && arrastrado.clase === "archivo") {
+        const sobre = ev.target.closest && ev.target.closest('[data-ref^="b:"]');
+        destino.sobre = sobre ? sobre.dataset.ref : null;               // soltado encima de un bloque: puede reemplazar su imagen
+      }
       if (destino) F.Editor.alSoltar(arrastrado, ev.dataTransfer, destino);
+      else if (arrastrado.clase === "archivo") F.Editor.alSoltarSinLugar(ev.dataTransfer);
     });
   }
 
@@ -94,6 +101,7 @@
       await w.FoliumPaginar(r.src, r.cfg);
       w.scrollTo(0, y);
       quitarAuxiliares();
+      marcarProblemas(F.Editor.problemas());
       marcarSeleccion(F.Editor.seleccion, false);
     });
     await inactiva();
@@ -245,6 +253,31 @@
     capa.addEventListener("pointercancel", soltar);
   }
 
+  /* ---------- problemas de validacion ----------
+     Cada problema trae el elemento afectado; se marca en la hoja (rojo: error, ambar: advertencia).
+     Las marcas son solo del editor y se vuelven a poner despues de cada repintado. */
+  function refDeProblema(r) {
+    if (r.tipo === "seccion") return "s:" + r.sid;
+    if (r.tipo === "bloque") return "b:" + r.sid + ":" + r.bid;
+    if (r.tipo === "celda") return "c:" + [r.sid, r.bid, r.fid, r.cid].join(":");
+    if (r.tipo === "columna") return "h:" + [r.sid, r.bid, r.cid].join(":");
+    return null;
+  }
+
+  function marcarProblemas(lista) {
+    if (!marcoListo) return;
+    const d = documento();
+    d.querySelectorAll(".f-error,.f-aviso").forEach((e) => e.classList.remove("f-error", "f-aviso"));
+    ["advertencia", "error"].forEach((nivel) => (lista || []).filter((p) => p.nivel === nivel).forEach((p) => {
+      const ref = p.ref ? refDeProblema(p.ref) : null;
+      if (!ref) return;
+      elementosDe(ref).forEach((e) => {
+        e.classList.remove("f-error", "f-aviso");
+        e.classList.add(nivel === "error" ? "f-error" : "f-aviso");
+      });
+    }));
+  }
+
   /* ---------- seleccion ---------- */
   function refDe(sel) {
     if (!sel) return null;
@@ -349,8 +382,7 @@
      Bloques: antes del primer titulo o bloque que queda debajo del cursor; antes de un titulo
      significa al final de la seccion anterior; sin nada debajo, al final de la ultima. */
   function destinoSoltar(ev, arrastrado) {
-    return arrastrado.clase === "bloque" || (arrastrado.clase === "nuevo" && arrastrado.tipo !== "seccion")
-      ? destinoBloque(ev) : destinoSeccion(ev);
+    return F.Editor.esBloque(arrastrado) ? destinoBloque(ev) : destinoSeccion(ev);
   }
 
   function destinoSeccion(ev) {
@@ -418,6 +450,7 @@
     asegurarMarco: asegurarMarco,
     render: render,
     marcarSeleccion: marcarSeleccion,
+    marcarProblemas: marcarProblemas,
     editarTitulo: editarTitulo,
     editarBloque: editarBloque,
     editarCelda: editarCelda,

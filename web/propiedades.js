@@ -21,7 +21,7 @@
     if (sel && sel.tipo === "celda") { cont.appendChild(encabezado("Celda")); F.Tablas.pintarCelda(cont, modelo, sel); return; }
     if (sel && sel.tipo === "columna") { cont.appendChild(encabezado("Columna")); F.Tablas.pintarColumna(cont, modelo, sel); return; }
     if (!sel || sel.tipo !== "seccion" || !modelo.buscar(sel.id)) {
-      cont.appendChild(el("p", { class: "ayuda", texto: "Selecciona una sección o un bloque, en la estructura o en la hoja, para ver sus propiedades." }));
+      F.Documento.pintar(cont, modelo);
       return;
     }
     const r = modelo.buscar(sel.id);
@@ -98,9 +98,9 @@
       cont.appendChild(encabezado("Tabla"));
       F.Tablas.pintarTabla(cont, modelo, sel);
       return;
-    } else {
-      cont.appendChild(campo("Tipo de bloque", el("code", { texto: NOMBRES_TIPO[b.tipo] || b.tipo })));
-      cont.appendChild(el("p", { class: "ayuda", texto: "Este tipo de bloque se edita en un paso posterior; por ahora puedes moverlo, duplicarlo o quitarlo." }));
+    } else if (b.tipo === "imagen") {
+      cont.appendChild(encabezado("Imagen"));
+      pintarImagen(cont, modelo, sel, b);
     }
 
     const c = el("input", { type: "checkbox" });
@@ -119,6 +119,49 @@
     const quitar = el("button", { type: "button", class: "peligro", texto: "Quitar bloque" });
     quitar.addEventListener("click", () => F.Editor.quitarBloque(sel.sid, sel.bid));
     cont.appendChild(el("div", { class: "fila-botones separada" }, [duplicar, quitar]));
+  }
+
+  function entradaPanel(tipo, valor, alConfirmar) {
+    const i = el("input", { type: tipo, autocomplete: "off" });
+    i.value = valor;
+    i.addEventListener("change", () => alConfirmar(i.value));
+    i.addEventListener("keydown", (ev) => { if (ev.key === "Enter") i.blur(); ev.stopPropagation(); });
+    return i;
+  }
+
+  function pintarImagen(cont, modelo, sel, b) {
+    const { sid, bid } = sel;
+    const ancla = (fn) => F.Editor.conSeleccion(fn);
+    cont.appendChild(el("p", { class: "ayuda" }, b.archivo
+      ? ["Archivo: ", el("code", { texto: b.archivo }), ". Su hash (SHA-256) se guarda con cada versión; los primeros 8 caracteres van en el nombre."]
+      : ["Todavía no tiene imagen: se dibuja el recuadro punteado con la descripción y el alto."]));
+    const elegir = el("button", { type: "button", texto: b.archivo ? "Reemplazar imagen…" : "Elegir archivo…" });
+    elegir.addEventListener("click", () => F.Imagenes.elegir(sid, bid));
+    const botones = [elegir];
+    if (b.archivo) {
+      const quitar = el("button", { type: "button", texto: "Quitar imagen" });
+      quitar.addEventListener("click", () => ancla(() => modelo.imagenArchivo(sid, bid, "")));
+      botones.push(quitar);
+    }
+    cont.appendChild(el("div", { class: "fila-botones" }, botones));
+    cont.appendChild(el("p", { class: "ayuda", texto: "También puedes pegar con Ctrl+V una imagen copiada (por ejemplo, exportada desde draw.io) o arrastrar un archivo PNG, JPG o SVG a la hoja." }));
+
+    const alto = entradaPanel("number", String(b.alto_mm), (v) => ancla(() => modelo.imagenCampo(sid, bid, "alto_mm", v)));
+    alto.step = "0.5"; alto.min = "1"; alto.max = "247";
+    cont.appendChild(campo("Alto (mm)", alto));
+    cont.appendChild(el("p", { class: "ayuda", texto: "La imagen ocupa 150 mm de ancho como máximo. Si no cabe en lo que queda de la hoja, pasa a la siguiente." }));
+
+    const desc = el("textarea", { rows: "4" });
+    desc.value = (Array.isArray(b.descripcion) ? b.descripcion : [b.descripcion || ""]).join("\n");
+    desc.addEventListener("change", () => ancla(() => modelo.imagenCampo(sid, bid, "descripcion", desc.value.split("\n"))));
+    desc.addEventListener("keydown", (ev) => ev.stopPropagation());
+    cont.appendChild(campo("Descripción (una línea por renglón)", desc));
+    cont.appendChild(el("p", { class: "ayuda", texto: "Se muestra en el recuadro punteado mientras no haya imagen; la primera línea es el título." }));
+
+    const fuente = entradaPanel("text", b.fuente_drawio || "", (v) => ancla(() => modelo.imagenCampo(sid, bid, "fuente_drawio", v)));
+    fuente.placeholder = "03_Diagramas/arquitectura.drawio";
+    cont.appendChild(campo("Fuente .drawio", fuente));
+    cont.appendChild(el("p", { class: "ayuda", texto: "Solo el texto de la ruta, dentro de 03_Diagramas. Folium no abre ni copia el archivo." }));
   }
 
   function pintarHistorial() {

@@ -25,8 +25,9 @@ Un archivo por documento en `DOC_RAIZ_PROCESO/<TRACKING>/actual/`: `general.json
 
 - `documento`: `general`, `repositorio` o `compartidos`.
 - `organizacion`, `titulo_pagina` y `portada` salen de aquí, y el pie es `aplicacion · titulo_pagina · versión`. El paginador es uno solo y no lleva ningún dato fijo.
-- La portada es una lista ordenada: se pueden agregar o quitar campos. Un campo lleva `valor` (texto fijo) o `automatico`: `version` o `fecha`, que Folium rellena al guardar. Mientras se edita, la versión es "Borrador".
+- La portada es una lista ordenada: se pueden agregar, quitar, editar y ordenar campos. Un campo lleva `etiqueta` y `valor` (texto fijo) o `automatico`: `version` o `fecha`, que Folium rellena al guardar y que no se editan ni se quitan (sí se ordenan). Mientras se edita, la versión es "Borrador".
 - `versiones_vigentes` solo existe en `general`: las versiones vigentes del documento 2 y del 3.
+- `estados`: lista `{texto, color}` con `color` ninguno, amarillo o gris. El texto no puede estar vacío ni repetido.
 - `ids_retirados` (opcional): identificadores de secciones quitadas. Folium lo llena al quitar una sección y la validación rechaza reutilizarlos.
 
 ## 2. Secciones (agregar y quitar libremente)
@@ -70,10 +71,11 @@ Todos llevan `tipo` y un `id` corto propio (`b1`, `b2`...), único dentro de su 
 | `imagen` | `archivo`, `alto_mm`, `descripcion`, `fuente_drawio` | imagen de diagrama |
 
 Imagen:
-- `archivo`: nombre dentro de `actual/imagenes/`. Se incrusta en el HTML al guardar la versión.
-- `alto_mm`: alto del recuadro o de la imagen.
+- `archivo`: solo el nombre (sin rutas) dentro de `actual/imagenes/`. Se incrusta en el HTML al guardar la versión. Sin `archivo`, el bloque se dibuja como el recuadro punteado `.diag`.
+- Nombre del archivo: Folium lo crea al subir la imagen, `<nombre>-<hash>.png|jpg|svg`. El nombre es el del archivo de origen si dice algo y, si no (una imagen pegada llega como `image.png`), `imagen-<id de la sección>`. El hash son los 8 primeros caracteres del SHA-256 del contenido; el hash completo se guarda con cada versión en `<nombre>.imagenes.json` y por él se detecta que una imagen cambió.
+- `alto_mm`: alto del recuadro o de la imagen, mayor que 0 y de hasta 247 mm (el alto útil de la hoja). La imagen ocupa 150 mm de ancho como máximo, se ajusta dentro de ese recuadro sin deformarse y, si no cabe en lo que queda de la hoja, pasa a la siguiente. Al poner una imagen en un bloque sin imagen, el alto es el que da 150 mm de ancho con su proporción; al reemplazarla se conserva el alto.
 - `descripcion`: lista de textos que se muestra en el recuadro punteado `.diag` mientras no hay imagen; el primero es el título y los demás son líneas de detalle.
-- `fuente_drawio`: ruta del `.drawio` en `03_Diagramas/`; se muestra como "Fuente: ...".
+- `fuente_drawio`: ruta del `.drawio`, escrita con `/` y dentro de `03_Diagramas/` (sin `..`); se muestra como "Fuente: ...". Es solo texto: Folium no abre ni copia el archivo.
 - El título de una tabla no es un campo: es la sección h3 o un bloque `etiqueta` que la precede.
 
 ## 5. Tablas
@@ -129,3 +131,7 @@ Nunca se guardan contraseñas ni valores de secretos; solo dónde están. La det
 ## 7. Comparar versiones (Fase 3)
 
 Cada versión guardada conserva el JSON junto al HTML. Con `id` estables en secciones, bloques, columnas y filas, dos versiones se comparan por identificador y no por posición.
+
+## 8. Problemas de validación
+
+Cada problema que devuelve la validación lleva `nivel` (`error` o `advertencia`), `donde` (texto), `mensaje` y `ref`, el elemento afectado: `{"tipo": "seccion", "sid"}`, `{"tipo": "bloque", "sid", "bid"}`, `{"tipo": "columna", "sid", "bid", "cid"}`, `{"tipo": "celda", "sid", "bid", "fid", "cid"}`, `{"tipo": "portada", "indice"}`, `{"tipo": "estados", "indice"}` o `{"tipo": "documento"}`. El editor lo usa para marcar el elemento y llevar a él.

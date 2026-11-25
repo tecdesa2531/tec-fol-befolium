@@ -2,7 +2,9 @@
 Todo ocurre en carpetas temporales con datos inventados.
 Uso: python pruebas/probar_aplicacion.py
 """
+import base64
 import datetime
+import hashlib
 import json
 import sys
 import tempfile
@@ -355,6 +357,45 @@ class PruebasApi(Base):
     def test_rechaza_documento_incorrecto(self):
         self.assertEqual(self.pedir("/api/documento/general", {"documento": "repositorio", "formato": 1})[0], 400)
         self.assertEqual(self.pedir("/api/documento/general", [1, 2])[0], 400)
+
+    PNG = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR" + (300).to_bytes(4, "big") + (100).to_bytes(4, "big")
+           + b"\x08\x02\x00\x00\x00")
+
+    def subir(self, contenido, nombre="image.png", seccion="descripcion"):
+        return self.pedir("/api/imagen", {"datos": base64.b64encode(contenido).decode("ascii"),
+                                          "nombre": nombre, "seccion": seccion})
+
+    def test_subir_imagen_con_nombre_propio_y_hash(self):
+        codigo, texto = self.subir(self.PNG)
+        r = json.loads(texto)
+        self.assertEqual(codigo, 200)
+        self.assertEqual(r["sha256"], hashlib.sha256(self.PNG).hexdigest())
+        self.assertEqual(r["archivo"], "imagen-descripcion-%s.png" % r["sha256"][:8])   # no "image.png"
+        self.assertEqual((r["ancho_px"], r["alto_px"], r["alto_mm"]), (300, 100, 50.0))  # 150 mm de ancho
+        self.assertEqual((self.app.actual / "imagenes" / r["archivo"]).read_bytes(), self.PNG)
+        otra = json.loads(self.subir(self.PNG, "Mi diagrama.png")[1])
+        self.assertTrue(otra["archivo"].startswith("mi-diagrama-"))                      # un nombre que dice algo se conserva
+        self.assertEqual(json.loads(self.subir(self.PNG)[1])["archivo"], r["archivo"])   # mismo contenido, mismo archivo
+
+    def test_subir_imagen_rechaza_lo_que_no_es_imagen(self):
+        self.assertEqual(self.subir(b"%PDF-1.4 inventado", "x.png")[0], 400)             # se mira el contenido, no el nombre
+        self.assertEqual(self.subir(b"")[0], 400)
+        self.assertEqual(self.pedir("/api/imagen", {"datos": "no es base64!!", "nombre": "x.png"})[0], 400)
+        self.assertEqual(self.subir(b'<svg xmlns="x" viewBox="0 0 400 200"></svg>', "d.svg")[0], 200)
+        self.assertFalse(any((self.app.actual / "imagenes").glob("x*")))
+
+    def test_imagen_sin_aplicacion_abierta(self):
+        self.servidor.ESTADO["app"] = None
+        self.assertEqual(self.subir(self.PNG)[0], 409)
+
+    def test_problemas_con_referencia_al_elemento(self):
+        doc = self.leer("general")
+        doc["secciones"][0]["bloques"].append({"tipo": "imagen", "id": "b9", "alto_mm": 900})
+        doc["portada"][0]["etiqueta"] = ""
+        codigo, texto = self.pedir("/api/documento/general", doc)
+        refs = [p["ref"] for p in json.loads(texto)["problemas"] if p["nivel"] == "error"]
+        self.assertIn({"tipo": "bloque", "sid": doc["secciones"][0]["id"], "bid": "b9"}, refs)
+        self.assertIn({"tipo": "portada", "indice": 0}, refs)
 
     def test_render_con_referencias(self):
         codigo, texto = self.pedir("/api/render/general", self.leer("general"))

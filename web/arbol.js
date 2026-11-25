@@ -14,7 +14,7 @@
     ["nota_destacada", "Nota destacada", true],
     ["etiqueta", "Etiqueta", true],
     ["tabla", "Tabla", true],
-    ["imagen", "Imagen", false],
+    ["imagen", "Imagen", true],
   ];
 
   let menuAbierto = null;

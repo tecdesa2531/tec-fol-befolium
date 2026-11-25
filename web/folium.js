@@ -110,12 +110,29 @@
     info.advertencias = respuesta.problemas.filter((p) => p.nivel === "advertencia");
     if (typeof respuesta.cambio === "boolean") info.cambio = respuesta.cambio;
     pintarPestanas();
-    if (nombre === activo) pintarAviso();
+    if (nombre === activo) {
+      pintarAviso();
+      F.Hoja.marcarProblemas(F.problemasActivos());
+      F.Documento.marcar();
+    }
+  };
+
+  /* Problemas (errores y advertencias) del documento activo, con el elemento afectado. */
+  F.problemasActivos = function () {
+    const info = estado && estado.documentos ? estado.documentos[activo] : null;
+    return info ? info.errores.concat(info.advertencias) : [];
   };
 
   function listaProblemas(problemas) {
     const ul = el("ul");
-    problemas.forEach((p) => ul.appendChild(el("li", {}, [el("span", { class: "donde", texto: p.donde + " " }), p.mensaje])));
+    problemas.forEach((p) => {
+      const li = el("li", { class: "ir", role: "button", tabindex: "0", title: "Ir al elemento" },
+        [el("span", { class: "donde", texto: p.donde + " " }), p.mensaje]);
+      const ir = () => F.Editor.irA(p.ref);
+      li.addEventListener("click", ir);
+      li.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ir(); } });
+      ul.appendChild(li);
+    });
     return ul;
   }
 

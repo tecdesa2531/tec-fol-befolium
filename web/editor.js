@@ -17,6 +17,7 @@
   let colaGuardado = Promise.resolve();
 
   E.modelo = () => E.modelos[E.activo] || null;
+  E.problemas = () => (F.problemasActivos ? F.problemasActivos() : []);
 
   /* ---------- carga ---------- */
   E.reiniciar = function () {
@@ -229,28 +230,35 @@
      final de la seccion seleccionada. */
   E.insertar = function (tipo) {
     if (tipo === "seccion") { E.agregarSeccion(); return; }
+    const lugar = E.lugarDeInsercion();
+    if (!lugar) { F.avisar("Primero agrega una sección."); return; }
+    colocarBloque(E.modelo(), lugar.sid, lugar.indice, tipo);
+  };
+
+  /* Donde cae un bloque nuevo: despues del seleccionado, al final de la seccion seleccionada o
+     al final de la ultima seccion. null si el documento no tiene secciones. */
+  E.lugarDeInsercion = function () {
     const m = E.modelo();
     const s = E.seleccion;
-    let sid = null, indice = null;
-    if (s && s.tipo === "bloque") { sid = s.sid; indice = m.bloqueDe(s.sid, s.bid).indice + 1; }
-    else if (s && s.tipo === "seccion") { sid = s.id; }
-    else if (m.doc.secciones.length) {
-      const ultima = (lista) => { const u = lista[lista.length - 1]; return (u.secciones && u.secciones.length) ? ultima(u.secciones) : u; };
-      sid = ultima(m.doc.secciones).id;
+    if (s && (s.tipo === "bloque" || s.tipo === "celda" || s.tipo === "columna") && m.bloqueDe(s.sid, s.bid)) {
+      return { sid: s.sid, indice: m.bloqueDe(s.sid, s.bid).indice + 1 };
     }
-    if (!sid) { F.avisar("Primero agrega una sección."); return; }
-    colocarBloque(m, sid, indice, tipo);
+    if (s && s.tipo === "seccion" && m.buscar(s.id)) return { sid: s.id, indice: null };
+    if (!m.doc.secciones.length) return null;
+    const ultima = (lista) => { const u = lista[lista.length - 1]; return (u.secciones && u.secciones.length) ? ultima(u.secciones) : u; };
+    return { sid: ultima(m.doc.secciones).id, indice: null };
   };
 
   function colocarBloque(m, sid, indice, tipo) {
-    const esTabla = tipo === "tabla";
-    const bid = intentar(() => (esTabla ? m.agregarTabla(sid, indice) : m.agregarBloque(sid, indice, tipo)));
+    const soloSeleccion = tipo === "tabla" || tipo === "imagen";     // sin texto que editar al insertar
+    const crear = () => (tipo === "tabla" ? m.agregarTabla(sid, indice) : tipo === "imagen" ? m.agregarImagen(sid, indice) : m.agregarBloque(sid, indice, tipo));
+    const bid = intentar(crear);
     if (!bid) return;
     E.seleccion = { tipo: "bloque", sid: sid, bid: bid };
-    if (!esTabla) E.pendienteEditar = { bloque: [sid, bid] };        // una tabla nueva solo se selecciona
+    if (!soloSeleccion) E.pendienteEditar = { bloque: [sid, bid] };
     F.Arbol.pintar();
     F.Propiedades.pintar();
-    if (esTabla) F.Hoja.marcarSeleccion(E.seleccion, true);
+    if (soloSeleccion) F.Hoja.marcarSeleccion(E.seleccion, true);
   }
 
   E.duplicarSeccion = function (id) {
@@ -311,6 +319,20 @@
     else F.Hoja.render(m);          // sin cambio: la hoja vuelve a los anchos guardados
   };
 
+  /* Clic en un problema de la lista: selecciona el elemento afectado y lo muestra. */
+  E.irA = function (ref) {
+    const m = E.modelo();
+    if (!m || !ref) return;
+    try {
+      if (ref.tipo === "seccion" && m.buscar(ref.sid)) E.seleccionar({ tipo: "seccion", id: ref.sid }, true);
+      else if (ref.tipo === "bloque" && m.bloqueDe(ref.sid, ref.bid)) E.seleccionar({ tipo: "bloque", sid: ref.sid, bid: ref.bid }, true);
+      else if (ref.tipo === "celda") { m.valorCelda(ref.sid, ref.bid, ref.fid, ref.cid); m.columnaDe(ref.sid, ref.bid, ref.cid); E.seleccionar({ tipo: "celda", sid: ref.sid, bid: ref.bid, fid: ref.fid, cid: ref.cid }, true); }
+      else if (ref.tipo === "columna") { m.columnaDe(ref.sid, ref.bid, ref.cid); E.seleccionar({ tipo: "columna", sid: ref.sid, bid: ref.bid, cid: ref.cid }, true); }
+      else if (ref.tipo === "portada" || ref.tipo === "estados" || ref.tipo === "documento") { E.seleccionar(null); F.Documento.resaltar(ref); }
+      else F.avisar("Ese elemento ya no existe.");
+    } catch (err) { F.avisar("Ese elemento ya no existe."); }
+  };
+
   E.deshacer = function () { const m = E.modelo(); if (m) m.deshacer(); };
   E.rehacer = function () { const m = E.modelo(); if (m) m.rehacer(); };
 
@@ -323,10 +345,19 @@
     if (nuevo) return { clase: "nuevo", tipo: nuevo.slice(F.Arbol.PREFIJO_NUEVO.length) };
     if (tipos.includes(F.Arbol.TIPO_SECCION)) return { clase: "seccion", tipo: "seccion" };
     if (tipos.includes(F.Arbol.TIPO_BLOQUE)) return { clase: "bloque", tipo: "bloque" };
+    if (tipos.includes("Files")) return { clase: "archivo", tipo: "archivo" };      // archivos de imagen desde el equipo
     return null;
   };
 
-  E.esBloque = (a) => a.clase === "bloque" || (a.clase === "nuevo" && a.tipo !== "seccion");
+  E.esBloque = (a) => a.clase === "bloque" || a.clase === "archivo" || (a.clase === "nuevo" && a.tipo !== "seccion");
+
+  /* Archivos soltados en un sitio sin destino exacto (por ejemplo, encima del primer titulo):
+     van al lugar de insercion habitual. */
+  E.alSoltarSinLugar = function (dt) {
+    const lugar = E.lugarDeInsercion();
+    if (!lugar) { F.avisar("Primero agrega una sección."); return; }
+    F.Imagenes.soltar(Array.from(dt.files), lugar.sid, lugar.indice, null);
+  };
 
   /* destino de secciones: { zona: "antes" | "despues" | "dentro" | "fin", ref }
      destino de bloques:   { bloque: true, sid, indice } o { zona: "dentro", ref } (fila del arbol) */
@@ -336,6 +367,7 @@
       const sid = destino.bloque ? destino.sid : destino.ref;
       const indice = destino.bloque ? destino.indice : null;
       if (!sid) return;
+      if (arrastrado.clase === "archivo") { F.Imagenes.soltar(Array.from(dt.files), sid, indice, destino.sobre); return; }
       if (arrastrado.clase === "nuevo") { colocarBloque(m, sid, indice, arrastrado.tipo); return; }
       const [origenSid, origenBid] = dt.getData(F.Arbol.TIPO_BLOQUE).split(":");
       const nuevo = intentar(() => m.moverBloque(origenSid, origenBid, sid, indice));
@@ -383,5 +415,26 @@
     }
   };
 
+  /* Ctrl+V con una imagen copiada (por ejemplo, exportada desde draw.io). Si hay una imagen
+     seleccionada la reemplaza; si no, se inserta una nueva en el lugar de insercion. */
+  E.alPegar = function (ev) {
+    const t = ev.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (!E.modelo() || document.querySelector("dialog[open]")) return;
+    const items = Array.from((ev.clipboardData && ev.clipboardData.items) || []);
+    const it = items.find((i) => i.kind === "file" && i.type.startsWith("image/"));
+    if (!it) return;
+    ev.preventDefault();
+    const archivo = it.getAsFile();
+    if (!archivo || !F.Imagenes.esImagen(archivo)) { F.avisar("Solo se admiten imágenes PNG, JPG o SVG."); return; }
+    F.Imagenes.pegar(archivo);
+  };
+
+  /* Un archivo soltado fuera de la hoja no debe abrirse en el navegador. */
+  ["dragover", "drop"].forEach((nombre) => document.addEventListener(nombre, (ev) => {
+    if (ev.dataTransfer && Array.from(ev.dataTransfer.types).includes("Files")) ev.preventDefault();
+  }));
+
+  document.addEventListener("paste", (ev) => E.alPegar(ev));
   document.addEventListener("keydown", (ev) => E.alTeclear(ev));
 })(window.Folium = window.Folium || {});

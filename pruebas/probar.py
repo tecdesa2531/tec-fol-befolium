@@ -182,6 +182,44 @@ class PruebasCeldasYContadores(unittest.TestCase):
         self.assertTrue(any("Formato anterior" in e for e in errores(doc)))
 
 
+class PruebasImagenesYEstados(unittest.TestCase):
+    def doc(self, bloque):
+        doc = cargar("general")
+        doc["secciones"] = [{"id": "s", "titulo": "S", "bloques": [bloque], "secciones": []}]
+        return doc
+
+    def test_imagen_valida_sin_archivo_se_dibuja_como_recuadro(self):
+        doc = self.doc({"tipo": "imagen", "id": "b1", "alto_mm": 60, "descripcion": ["Titulo", "detalle"],
+                        "fuente_drawio": "03_Diagramas/arq.drawio"})
+        self.assertEqual(errores(doc), [])
+        h = visor.generar_html(doc)
+        self.assertIn('class="diag"', h)
+        self.assertIn("height:60mm", h)
+
+    def test_alto_y_fuente_de_la_imagen(self):
+        for alto in (0, -1, 248, "x", None):
+            self.assertTrue(errores(self.doc({"tipo": "imagen", "id": "b1", "alto_mm": alto})), alto)
+        for fuente in ("otra/arq.drawio", "03_Diagramas/../x.drawio", "03_Diagramas\\x.drawio", "03_Diagramas"):
+            doc = self.doc({"tipo": "imagen", "id": "b1", "alto_mm": 50, "fuente_drawio": fuente})
+            self.assertTrue(any("fuente_drawio" in e for e in errores(doc)), fuente)
+
+    def test_los_problemas_traen_el_elemento(self):
+        doc = self.doc({"tipo": "tabla", "id": "b1", "clase": "estado",
+                        "columnas": [{"id": "c1", "titulo": "A", "ancho_mm": 150, "tipo": "estado"}],
+                        "filas": [{"id": "f1", "celdas": {"c1": "Nada"}}]})
+        malo = [p for p in validacion.validar(doc) if "Estado 'Nada'" in p["mensaje"]][0]
+        self.assertEqual(malo["ref"], {"tipo": "celda", "sid": "s", "bid": "b1", "fid": "f1", "cid": "c1"})
+        doc["secciones"][0]["titulo"] = ""
+        self.assertIn({"tipo": "seccion", "sid": "s"}, [p["ref"] for p in validacion.validar(doc)])
+
+    def test_estados_repetidos_o_vacios(self):
+        doc = self.doc({"tipo": "parrafo", "id": "b1", "texto": "x"})
+        doc["estados"] = [{"texto": "A", "color": "gris"}, {"texto": "A", "color": "gris"}, {"texto": " ", "color": "gris"}]
+        mensajes = errores(doc)
+        self.assertTrue(any("repetido" in m for m in mensajes))
+        self.assertTrue(any("sin texto" in m for m in mensajes))
+
+
 class PruebasCss(unittest.TestCase):
     def test_llaves_balanceadas(self):
         # una llave de mas descarta en silencio las reglas que siguen

@@ -326,4 +326,80 @@ prueba("redimensionar: la vecina cede, suma fija, minimo 5 mm y medio mm", () =>
   assert.strictEqual(m.redimensionarColumna("b", t, "c1", 5), false);   // sin cambio no se registra
 });
 
+prueba("imagenes: bloque sin archivo, asignar, alto y descripcion", () => {
+  const m = new Modelo("general", doc());
+  const b = m.agregarImagen("b", null);
+  assert.deepStrictEqual(m.imagenDe("b", b), { tipo: "imagen", id: b, alto_mm: 80, descripcion: ["Imagen pendiente"] });
+  m.imagenArchivo("b", b, "img-12345678.png", 50);
+  assert.strictEqual(m.imagenDe("b", b).alto_mm, 50);                  // sin imagen previa toma el alto sugerido
+  m.imagenCampo("b", b, "alto_mm", 70);
+  m.imagenArchivo("b", b, "otra-abcdef12.png", 20);                    // reemplazar conserva el alto del usuario
+  assert.strictEqual(m.imagenDe("b", b).alto_mm, 70);
+  assert.strictEqual(m.imagenDe("b", b).archivo, "otra-abcdef12.png");
+  assert.throws(() => m.imagenCampo("b", b, "alto_mm", 300), /entre 0 y 247/);
+  m.imagenCampo("b", b, "descripcion", ["Titulo", "", " detalle "]);
+  assert.deepStrictEqual(m.imagenDe("b", b).descripcion, ["Titulo", "detalle"]);
+  m.imagenCampo("b", b, "fuente_drawio", "03_Diagramas/a.drawio");
+  m.imagenCampo("b", b, "fuente_drawio", "");
+  assert.strictEqual(m.imagenDe("b", b).fuente_drawio, undefined);
+  m.imagenArchivo("b", b, "");
+  assert.strictEqual(m.imagenDe("b", b).archivo, undefined);           // vuelve el recuadro punteado
+  const n = m.antes.length;
+  const c = m.agregarImagen("b", 0, "nueva-aaaaaaaa.png", 33.5);       // con archivo: un solo cambio
+  assert.strictEqual(m.antes.length, n + 1);
+  assert.strictEqual(m.buscar("b").sec.bloques[0].id, c);
+  assert.strictEqual(m.imagenDe("b", c).alto_mm, 33.5);
+  m.imagenArchivo("b", c, "x-bbbbbbbb.png", 5);
+  m.imagenCampo("b", c, "alto_mm", 247);
+  assert.throws(() => m.imagenDe("a", "b1"), /No se encontró la imagen/);
+});
+
+prueba("portada: agregar, editar, ordenar y quitar; la version y la fecha no se tocan", () => {
+  const m = new Modelo("general", { formato: 1, documento: "general", secciones: [], portada: [
+    { etiqueta: "Proyecto", valor: "P" }, { etiqueta: "Versión", automatico: "version" }, { etiqueta: "Fecha", automatico: "fecha" }] });
+  const i = m.portadaAgregar();
+  assert.strictEqual(i, 3);
+  m.portadaEditar(3, "etiqueta", " Líder ");
+  m.portadaEditar(3, "valor", "Persona");
+  assert.deepStrictEqual(m.doc.portada[3], { etiqueta: "Líder", valor: "Persona" });
+  assert.throws(() => m.portadaEditar(3, "etiqueta", "  "), /etiqueta/);
+  assert.throws(() => m.portadaEditar(1, "etiqueta", "X"), /no se editan/);
+  assert.throws(() => m.portadaQuitar(2), /no se quitan/);
+  m.portadaMover(3, -1);                                               // ordenar vale para todos
+  assert.deepStrictEqual(m.doc.portada.map((c) => c.etiqueta), ["Proyecto", "Versión", "Líder", "Fecha"]);
+  m.portadaMover(1, -1);
+  assert.strictEqual(m.doc.portada[0].etiqueta, "Versión");
+  assert.throws(() => m.portadaMover(0, -1), /extremo/);
+  m.portadaQuitar(2);
+  assert.deepStrictEqual(m.doc.portada.map((c) => c.etiqueta), ["Versión", "Proyecto", "Fecha"]);
+});
+
+prueba("estados: agregar, color, uso, renombrar con sus celdas y quitar", () => {
+  const m = new Modelo("general", doc());
+  m.doc.estados = [{ texto: "En uso", color: "ninguno" }, { texto: "Pendiente", color: "amarillo" }];
+  const t = m.agregarTabla("b", null);
+  m.propiedadColumna("b", t, "c1", "tipo", "estado");
+  m.celdaTexto("b", t, "f1", "c1", "En uso\n22/11/2026");
+  m.celdaTexto("b", t, "f1", "c2", "En uso");                             // columna de texto: no cuenta
+  m.celdaPropiedad("b", t, "f1", "c3", "tipo", "estado");
+  m.celdaTexto("b", t, "f1", "c3", "En uso");                             // celda estado en columna de texto: cuenta
+  assert.strictEqual(m.usoEstado("En uso"), 2);
+  assert.strictEqual(m.usoEstado("Pendiente"), 0);
+  m.estadoRenombrar(0, "Vigente");
+  assert.strictEqual(m.doc.estados[0].texto, "Vigente");
+  assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c1, "Vigente\n22/11/2026");   // solo la primera linea
+  assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c2, "En uso");
+  assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c3.texto, "Vigente");
+  assert.throws(() => m.estadoRenombrar(0, "Pendiente"), /Ya existe/);
+  assert.throws(() => m.estadoRenombrar(0, " "), /necesita/);
+  m.estadoColor(1, "gris");
+  assert.throws(() => m.estadoColor(1, "rojo"), /no válido/);
+  const nuevo = m.estadoAgregar();
+  assert.strictEqual(m.doc.estados[nuevo].texto, "Nuevo estado");
+  assert.strictEqual(m.doc.estados[m.estadoAgregar()].texto, "Nuevo estado 2");
+  m.estadoQuitar(0);
+  assert.deepStrictEqual(m.doc.estados.map((e) => e.texto), ["Pendiente", "Nuevo estado", "Nuevo estado 2"]);
+  assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c1, "Vigente\n22/11/2026");   // las celdas no se tocan al quitar
+});
+
 console.log("\n" + pruebas + " pruebas del modelo correctas");

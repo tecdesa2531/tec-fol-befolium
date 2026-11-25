@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, urlparse
 import aplicacion
 import configuracion
 import documentos
+import imagenes
 import validacion
 import versiones
 import visor
@@ -20,6 +21,7 @@ import visor
 RAIZ = Path(__file__).resolve().parent
 PUERTO = int(os.environ.get("FOLIUM_PUERTO", "8765"))
 LIMITE_CUERPO = 8 * 1024 * 1024
+LIMITE_IMAGEN = 16 * 1024 * 1024        # una imagen de hasta 10 MB va en base64
 
 # Solo se sirven estos archivos; nada mas de disco.
 ESTATICOS = {"/": ("web/folium.html", "text/html; charset=utf-8")}
@@ -109,7 +111,7 @@ class Manejador(BaseHTTPRequestHandler):
         ruta = urlparse(self.path).path
         try:
             largo = int(self.headers.get("Content-Length", "0"))
-            if largo > LIMITE_CUERPO:
+            if largo > (LIMITE_IMAGEN if ruta == "/api/imagen" else LIMITE_CUERPO):
                 raise ValueError("La petición es demasiado grande.")
             datos = json.loads(self.rfile.read(largo) or b"{}")
             if ruta == "/api/previsualizar":
@@ -127,6 +129,9 @@ class Manejador(BaseHTTPRequestHandler):
                 self.con_aplicacion(lambda app: self.guardar_borrador(app, ruta.split("/")[3], datos))
             elif re.fullmatch(r"/api/render/(general|repositorio|compartidos)", ruta):
                 self.con_aplicacion(lambda app: self.renderizar(app, ruta.split("/")[3], datos))
+            elif ruta == "/api/imagen":
+                self.con_aplicacion(lambda app: self.json(200, imagenes.guardar(
+                    app.actual, datos.get("datos", ""), datos.get("nombre", ""), datos.get("seccion", ""))))
             elif ruta == "/api/guardar":
                 self.con_aplicacion(lambda app: self.json(200, versiones.guardar_version(app, datos)))
             else:

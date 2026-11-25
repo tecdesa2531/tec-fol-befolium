@@ -6,6 +6,8 @@
   const MAX_NIVEL = 3;
   const MAX_HISTORIAL = 200;
   const ANCHO_MINIMO = 5;
+  const ALTO_UTIL = 247;          // mm de la hoja
+  const ALTO_IMAGEN = 80;         // mm de una imagen nueva sin archivo
   const TEXTOS_NUEVOS = {
     parrafo: "Nuevo párrafo",
     nota: "Nueva nota",
@@ -671,6 +673,200 @@
       if (campo === "tipo" && !["", "texto", "identificador", "estado"].includes(valor)) throw new Error("Tipo de celda no válido.");
       if (campo !== "color" && campo !== "tipo") throw new Error("Propiedad de celda no válida.");
       return this.celdaCambiar(sid, bid, fid, cid, (v) => { v[campo] = valor; });
+    }
+
+    /* ---------- imagenes ---------- */
+    imagenDe(sid, bid) {
+      const o = this.bloqueDe(sid, bid);
+      if (!o || o.bloque.tipo !== "imagen") throw new Error("No se encontró la imagen.");
+      return o.bloque;
+    }
+
+    /* Bloque de imagen sin archivo: se dibuja el recuadro punteado con su descripcion y su alto. */
+    agregarImagen(sid, indice, archivo, altoSugerido) {
+      let nuevoId = null;
+      this.cambiar(() => {
+        const r = this.buscar(sid);
+        if (!r) throw new Error("No se encontró la sección de destino.");
+        if (!r.sec.bloques) r.sec.bloques = [];
+        nuevoId = this.idBloqueNuevo(r.sec);
+        const i = indice === null || indice === undefined ? r.sec.bloques.length : indice;
+        const b = { tipo: "imagen", id: nuevoId, alto_mm: ALTO_IMAGEN, descripcion: ["Imagen pendiente"] };
+        if (archivo) {                       // con imagen: el alto sale de su proporcion y todo queda en un solo cambio
+          b.archivo = archivo;
+          b.descripcion = [];
+          if (altoSugerido > 0) b.alto_mm = Math.min(ALTO_UTIL, altoSugerido);
+        }
+        r.sec.bloques.splice(i, 0, b);
+      });
+      return nuevoId;
+    }
+
+    /* Asigna el archivo de la imagen ("" la quita). Si el bloque no tenia imagen toma el alto
+       sugerido (el que da 150 mm de ancho); si ya tenia, conserva su alto. */
+    imagenArchivo(sid, bid, archivo, altoSugerido) {
+      return this.cambiar(() => {
+        const b = this.imagenDe(sid, bid);
+        if (!archivo) { delete b.archivo; return; }
+        if (!b.archivo && altoSugerido > 0) b.alto_mm = Math.min(ALTO_UTIL, altoSugerido);
+        b.archivo = archivo;
+      });
+    }
+
+    /* campo: "alto_mm" (numero), "descripcion" (lista de lineas) o "fuente_drawio" (texto; vacio la quita) */
+    imagenCampo(sid, bid, campo, valor) {
+      return this.cambiar(() => {
+        const b = this.imagenDe(sid, bid);
+        if (campo === "alto_mm") {
+          const n = Number(valor);
+          if (!(n > 0) || n > ALTO_UTIL) throw new Error("El alto debe estar entre 0 y " + ALTO_UTIL + " mm.");
+          b.alto_mm = n;
+        } else if (campo === "descripcion") {
+          b.descripcion = valor.map((x) => String(x).trim()).filter((x) => x !== "");
+        } else if (campo === "fuente_drawio") {
+          const t = String(valor).trim();
+          if (t) b.fuente_drawio = t; else delete b.fuente_drawio;
+        } else {
+          throw new Error("Propiedad de imagen no válida.");
+        }
+      });
+    }
+
+    /* ---------- portada ---------- */
+    camposPortada() { return this.doc.portada || (this.doc.portada = []); }
+
+    portadaCampo(i) {
+      const c = this.camposPortada()[i];
+      if (!c) throw new Error("No se encontró el campo de la portada.");
+      return c;
+    }
+
+    portadaAgregar() {
+      this.cambiar(() => { this.camposPortada().push({ etiqueta: "Nuevo campo", valor: "" }); });
+      return this.camposPortada().length - 1;
+    }
+
+    /* La version y la fecha (campos automaticos) no se editan ni se quitan; si se pueden ordenar. */
+    portadaEditar(i, campo, valor) {
+      return this.cambiar(() => {
+        const c = this.portadaCampo(i);
+        if (c.automatico) throw new Error("La versión y la fecha se calculan solas y no se editan.");
+        if (campo === "etiqueta") {
+          if (!String(valor).trim()) throw new Error("El campo necesita una etiqueta.");
+          c.etiqueta = String(valor).trim();
+        } else if (campo === "valor") {
+          c.valor = String(valor);
+        } else {
+          throw new Error("Propiedad de portada no válida.");
+        }
+      });
+    }
+
+    portadaQuitar(i) {
+      return this.cambiar(() => {
+        if (this.portadaCampo(i).automatico) throw new Error("La versión y la fecha no se quitan.");
+        this.camposPortada().splice(i, 1);
+      });
+    }
+
+    portadaMover(i, dir) {
+      return this.cambiar(() => {
+        const lista = this.camposPortada();
+        this.portadaCampo(i);
+        const j = i + dir;
+        if (j < 0 || j >= lista.length) throw new Error("El campo ya está en ese extremo.");
+        const c = lista[i];
+        lista[i] = lista[j];
+        lista[j] = c;
+      });
+    }
+
+    /* ---------- lista de estados ---------- */
+    /* Recorre las celdas de todas las tablas: fn(fila, columna, valor) con valor = { texto, color, tipo }. */
+    recorrerCeldas(fn) {
+      const secciones = (lista) => lista.forEach((s) => {
+        (s.bloques || []).filter((b) => b.tipo === "tabla").forEach((t) => {
+          t.filas.forEach((f) => t.columnas.forEach((c) => {
+            const v = f.celdas ? f.celdas[c.id] : undefined;
+            const valor = v && typeof v === "object"
+              ? { texto: v.texto || "", color: v.color || "", tipo: v.tipo || "" }
+              : { texto: v === undefined || v === null ? "" : String(v), color: "", tipo: "" };
+            fn(f, c, valor);
+          }));
+        });
+        secciones(s.secciones || []);
+      });
+      secciones(this.doc.secciones);
+    }
+
+    /* Cuantas celdas de estado usan ese texto (cuenta la primera linea). */
+    usoEstado(texto) {
+      let n = 0;
+      this.recorrerCeldas((f, c, v) => {
+        if ((v.tipo || c.tipo) === "estado" && v.texto.split("\n")[0].trim() === texto) n++;
+      });
+      return n;
+    }
+
+    listaEstados() { return this.doc.estados || (this.doc.estados = []); }
+
+    estadoDe(i) {
+      const e = this.listaEstados()[i];
+      if (!e) throw new Error("No se encontró el estado.");
+      return e;
+    }
+
+    estadoAgregar() {
+      this.cambiar(() => {
+        const usados = new Set(this.listaEstados().map((e) => e.texto));
+        let texto = "Nuevo estado", n = 2;
+        while (usados.has(texto)) texto = "Nuevo estado " + n++;
+        this.listaEstados().push({ texto: texto, color: "ninguno" });
+      });
+      return this.listaEstados().length - 1;
+    }
+
+    estadoColor(i, color) {
+      if (!["ninguno", "amarillo", "gris"].includes(color)) throw new Error("Color no válido.");
+      return this.cambiar(() => { this.estadoDe(i).color = color; });
+    }
+
+    /* Cambia el texto del estado y el de las celdas que lo usan (solo su primera linea). */
+    estadoRenombrar(i, nuevo) {
+      nuevo = String(nuevo).trim();
+      return this.cambiar(() => {
+        const e = this.estadoDe(i);
+        if (!nuevo) throw new Error("El estado necesita un texto.");
+        if (nuevo.includes("\n")) throw new Error("El estado va en una sola línea.");
+        if (this.listaEstados().some((x, k) => k !== i && x.texto === nuevo)) throw new Error("Ya existe un estado con ese texto.");
+        const viejo = e.texto;
+        e.texto = nuevo;
+        const secciones = (lista) => lista.forEach((s) => {
+          (s.bloques || []).filter((b) => b.tipo === "tabla").forEach((t) => {
+            t.filas.forEach((f) => t.columnas.forEach((c) => {
+              const v = this.valorDeCelda(f, c.id);
+              if ((v.tipo || c.tipo) === "estado" && v.texto.split("\n")[0].trim() === viejo) {
+                const partes = v.texto.split("\n");
+                partes[0] = nuevo;
+                v.texto = partes.join("\n");
+                this.guardarCelda(f, c.id, v);
+              }
+            }));
+          });
+          secciones(s.secciones || []);
+        });
+        secciones(this.doc.secciones);
+      });
+    }
+
+    valorDeCelda(f, cid) {
+      const v = f.celdas ? f.celdas[cid] : undefined;
+      if (v && typeof v === "object") return { texto: v.texto || "", color: v.color || "", tipo: v.tipo || "" };
+      return { texto: v === undefined || v === null ? "" : String(v), color: "", tipo: "" };
+    }
+
+    estadoQuitar(i) {
+      return this.cambiar(() => { this.estadoDe(i); this.listaEstados().splice(i, 1); });
     }
   }
 

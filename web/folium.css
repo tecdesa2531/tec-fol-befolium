@@ -97,7 +97,10 @@ a{color:var(--azul)}
 #vista select{width:auto;margin:0;padding:2px 6px;border-radius:6px;border:1px solid var(--linea-fuerte);background:var(--panel)}
 #hoja{flex:1;width:100%;border:0;background:var(--fondo)}
 #aviso{flex:none;background:var(--aviso);padding:8px 14px;font-size:13px;border-radius:var(--radio);margin-bottom:8px}
-#aviso ul{margin:4px 0 0;padding-left:18px}
+#aviso ul{margin:4px 0 0;padding-left:18px;max-height:96px;overflow:auto}
+#aviso li.ir{cursor:pointer;border-radius:4px}
+#aviso li.ir:hover,#aviso li.ir:focus{background:rgba(0,0,0,.06);outline:0}
+#aviso .donde{color:var(--suave);font-size:12px}
 #mensaje{flex:none;max-height:100%;overflow:auto;padding:28px 32px;width:min(760px,100%);margin:0 auto;background:var(--panel);
   border-radius:var(--radio);box-shadow:var(--sombra);align-self:center;margin-top:12px}
 #mensaje h2{font-size:18px;font-weight:600;margin:0 0 8px}
@@ -177,3 +180,9 @@ button.peligro{color:var(--error);border-color:#E6B8B4}
 #props .unidad,#props .suma{font-size:12px;color:var(--suave)}
 #props .suma.mal{color:var(--error);font-weight:600}
 #props .suma.bien{color:var(--suave)}
+
+/* portada y estados en el panel del documento */
+#props .tarjeta.con-error{border-color:var(--error);background:var(--error-claro)}
+#props .tarjeta.con-aviso{border-color:#E0A100;background:var(--aviso)}
+#props .tarjeta .fila-botones{margin-top:6px}
+#props .tarjeta>input+input{margin-top:6px}

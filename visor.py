@@ -191,6 +191,8 @@ html,body{background:#F0F1F5}
 .bar{display:none}
 #pages{padding-top:24px}
 .page{box-shadow:0 1px 3px rgba(20,30,50,.10),0 6px 18px rgba(20,30,50,.10)}
+.f-error{outline:2px solid #C62828;outline-offset:2px}
+.f-aviso{outline:2px dashed #E0A100;outline-offset:2px}
 .f-sel{outline:2px solid #0070C0;outline-offset:3px}
 .f-editando{outline:2px solid #0070C0;outline-offset:3px;background:#E8F2FA;cursor:text}
 .f-linea{position:absolute;height:3px;background:#0070C0;border-radius:2px;pointer-events:none;z-index:50}
@@ -202,7 +204,7 @@ html,body{background:#F0F1F5}
 .f-mas:hover{background:rgba(0,112,192,.32)}
 .f-borde{position:absolute;width:2px;background:#0070C0;pointer-events:none;z-index:46}
 }
-@media print{.f-linea,.f-asa,.f-mas,.f-borde{display:none!important}}
+@media print{.f-linea,.f-asa,.f-mas,.f-borde{display:none!important}.f-error,.f-aviso{outline:0!important}}
 </style>
 """ 
 
