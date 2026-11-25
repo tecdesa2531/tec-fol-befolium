@@ -350,6 +350,9 @@
     c.appendChild(el("div", { class: "nota", texto: "Antes de guardar: elige «Guardar como PDF» (no «Microsoft Print to PDF»), abre «Más ajustes» y activa «Gráficos de fondo»." }));
     if (r.copiados.length) c.appendChild(el("p", { texto: "PDF copiados de la versión anterior: " + r.copiados.join(", ") }));
     r.avisos.forEach((a) => c.appendChild(el("div", { class: "nota", texto: a })));
+    if (r.imagenes_borradas && r.imagenes_borradas.length) {
+      c.appendChild(el("p", { class: "ayuda", texto: "Se borraron de actual/imagenes " + F.cantidad(r.imagenes_borradas.length, "imagen que ya no usa", "imágenes que ya no usa") + " ningún bloque (las versiones guardadas las llevan incrustadas)." }));
+    }
   }
 
   /* ---------- editor: botones de los paneles ---------- */

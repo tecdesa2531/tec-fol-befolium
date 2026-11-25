@@ -191,6 +191,7 @@ html,body{background:#F0F1F5}
 .bar{display:none}
 #pages{padding-top:24px}
 .page{box-shadow:0 1px 3px rgba(20,30,50,.10),0 6px 18px rgba(20,30,50,.10)}
+img{-webkit-user-drag:none;user-select:none}
 .f-error{outline:2px solid #C62828;outline-offset:2px}
 .f-aviso{outline:2px dashed #E0A100;outline-offset:2px}
 .f-sel{outline:2px solid #0070C0;outline-offset:3px}

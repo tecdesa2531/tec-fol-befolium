@@ -104,6 +104,7 @@ class Navegador:
         self.ejecutable = buscar_navegador()
         self.ancho, self.alto = ancho, alto
         self.contador = 0
+        self.eventos = []            # eventos del navegador recibidos mientras se esperaba una respuesta
 
     def __enter__(self):
         self.perfil = tempfile.TemporaryDirectory()
@@ -142,6 +143,8 @@ class Navegador:
         self.ws.enviar(json.dumps({"id": numero, "method": metodo, "params": parametros}))
         while True:
             r = json.loads(self.ws.recibir())
+            if "method" in r:
+                self.eventos.append(r)
             if r.get("id") == numero:
                 if "error" in r:
                     raise RuntimeError("%s: %s" % (metodo, r["error"]))
@@ -152,6 +155,42 @@ class Navegador:
         if "exceptionDetails" in r:
             raise RuntimeError("Error en la pagina: %s" % json.dumps(r["exceptionDetails"])[:300])
         return r["result"].get("value")
+
+    def raton(self, tipo, x, y, **extra):
+        parametros = {"type": tipo, "x": x, "y": y, "button": "left" if tipo != "mouseMoved" or extra.get("buttons") else "none",
+                      "clickCount": 1}
+        parametros.update(extra)
+        return self.llamar("Input.dispatchMouseEvent", **parametros)
+
+    def arrastrar(self, x0, y0, x1, y1, archivos=None):
+        """Arrastre real con el raton: el navegador inicia el arrastre (dragstart y su dataTransfer
+        son los suyos) y se suelta en el destino. Devuelve False si el navegador no inicio ninguno.
+        `archivos`: rutas que se agregan al arrastre, como hace el navegador al arrastrar una imagen."""
+        self.llamar("Input.setInterceptDrags", enabled=True)
+        self.eventos = [e for e in self.eventos if e["method"] != "Input.dragIntercepted"]
+        self.raton("mouseMoved", x0, y0)
+        self.raton("mousePressed", x0, y0)
+        interceptado = None
+        for i in range(1, 13):
+            self.raton("mouseMoved", x0 + (x1 - x0) * i / 20, y0 + (y1 - y0) * i / 20, buttons=1)
+            time.sleep(0.06)
+            for e in self.eventos:
+                if e["method"] == "Input.dragIntercepted":
+                    interceptado = e["params"]["data"]
+            if interceptado:
+                break
+        if not interceptado:
+            self.raton("mouseReleased", x0, y0)
+            return False
+        if archivos:
+            interceptado["files"] = [str(a) for a in archivos]
+        self.llamar("Input.dispatchDragEvent", type="dragEnter", x=x1, y=y1, data=interceptado)
+        for i in range(4):
+            self.llamar("Input.dispatchDragEvent", type="dragOver", x=x1, y=y1 + i % 2, data=interceptado)
+            time.sleep(0.06)
+        self.llamar("Input.dispatchDragEvent", type="drop", x=x1, y=y1, data=interceptado)
+        self.raton("mouseReleased", x1, y1)
+        return True
 
     def navegar(self, url):
         self.llamar("Page.navigate", url=url)

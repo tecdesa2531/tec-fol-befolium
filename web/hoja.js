@@ -51,12 +51,17 @@
       iniciarArrastre(ev);
     }, true);
     d.addEventListener("dragstart", (ev) => {
+      F.Editor.arrastreInterno = true;
       const asa = ev.target.closest && ev.target.closest(".f-asa");
-      if (!asa) return;
+      if (!asa) {
+        if (ev.target.tagName === "IMG") ev.preventDefault();      // solo el asa del bloque arrastra, no la imagen
+        return;
+      }
+      ev.dataTransfer.setData(F.TIPO_INTERNO, "bloque");
       ev.dataTransfer.setData(F.Arbol.TIPO_BLOQUE, asa.dataset.bloque);
       ev.dataTransfer.effectAllowed = "move";
     });
-    d.addEventListener("dragend", ocultarLinea);
+    d.addEventListener("dragend", () => { ocultarLinea(); F.Editor.arrastreInterno = false; });
     d.addEventListener("dragover", (ev) => {
       const arrastrado = F.Editor.tipoArrastrado(ev.dataTransfer);
       if (!arrastrado) return;
@@ -100,6 +105,7 @@
       const y = w.scrollY;
       await w.FoliumPaginar(r.src, r.cfg);
       w.scrollTo(0, y);
+      documento().querySelectorAll("img").forEach((i) => { i.draggable = false; });
       quitarAuxiliares();
       marcarProblemas(F.Editor.problemas());
       marcarSeleccion(F.Editor.seleccion, false);

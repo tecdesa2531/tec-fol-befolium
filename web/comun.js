@@ -2,6 +2,10 @@
 (function (F) {
   "use strict";
 
+  /* Marca de los arrastres que empiezan en Folium (mover bloques o secciones, paleta): nunca se
+     tratan como archivos que llegan de fuera. */
+  F.TIPO_INTERNO = "application/x-folium";
+
   /* Crea un elemento. props: atributos (texto = textContent); hijos: nodos o textos. */
   F.el = function (tag, props, hijos) {
     const e = document.createElement(tag);

@@ -189,6 +189,24 @@ def tokens_de(app, vigentes):
     return tokens
 
 
+def limpiar_imagenes(app):
+    """Borra de actual/imagenes/ las que ningun bloque de los tres documentos usa (las versiones
+    guardadas ya las llevan incrustadas). Devuelve los nombres borrados."""
+    carpeta = app.actual / "imagenes"
+    if not carpeta.is_dir():
+        return []
+    usadas = set()
+    for doc in cargar_actuales(app).values():
+        if doc:
+            usadas.update(imagenes_de(doc))
+    borradas = []
+    for ruta in sorted(carpeta.iterdir()):
+        if ruta.is_file() and ruta.name not in usadas:
+            ruta.unlink()
+            borradas.append(ruta.name)
+    return borradas
+
+
 # ---------- guardado ----------
 def guardar_version(app, pedidas, hoy=None):
     """Guarda una version. `pedidas` trae la version de cada documento que cambia.
@@ -269,4 +287,5 @@ def guardar_version(app, pedidas, hoy=None):
         else:
             avisos.append("No se encontró el PDF anterior %s; cópialo a mano en la carpeta nueva." % nombre)
     return {"carpeta": str(carpeta_pdf), "version_general": nuevas["general"],
-            "imprimir": imprimir, "copiados": copiados, "avisos": avisos}
+            "imprimir": imprimir, "copiados": copiados, "avisos": avisos,
+            "imagenes_borradas": limpiar_imagenes(app)}

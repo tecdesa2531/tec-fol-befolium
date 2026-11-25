@@ -265,6 +265,25 @@ class PruebasImagenYTablas(Base):
         pagina = (self.app.versiones("general") / "20260105_demoap_general-v01.html").read_text(encoding="utf-8")
         self.assertIn("data:image/png;base64,", pagina)
 
+    def test_guardar_version_borra_las_imagenes_sin_uso(self):
+        self.crear_todo()
+        carpeta = self.app.actual / "imagenes"
+        carpeta.mkdir(exist_ok=True)
+        (carpeta / "en-uso.png").write_bytes(b"\x89PNG uno")
+        (carpeta / "reemplazada.png").write_bytes(b"\x89PNG dos")
+        (carpeta / "otra-en-compartidos.png").write_bytes(b"\x89PNG tres")
+        gen = self.leer("general")
+        gen["secciones"][0]["bloques"].append({"tipo": "imagen", "id": "b1", "alto_mm": 50, "archivo": "en-uso.png"})
+        self.escribir("general", gen)
+        comp = self.leer("compartidos")
+        comp["secciones"][0]["bloques"].append({"tipo": "imagen", "id": "b1", "alto_mm": 50, "archivo": "otra-en-compartidos.png"})
+        self.escribir("compartidos", comp)
+        r = versiones.guardar_version(self.app, {"repositorio": "0.1.0"}, DIA1)
+        self.assertEqual(r["imagenes_borradas"], ["reemplazada.png"])
+        self.assertEqual(sorted(p.name for p in carpeta.iterdir()), ["en-uso.png", "otra-en-compartidos.png"])
+        pagina = (self.app.versiones("general") / "20260105_demoap_general-v01.html").read_text(encoding="utf-8")
+        self.assertIn("data:image/png;base64,", pagina)             # la version ya lleva la imagen incrustada
+
     def test_archivo_de_imagen_sin_rutas(self):
         self.crear_todo()
         gen = self.leer("general")

@@ -62,6 +62,7 @@
     f.addEventListener("click", () => F.Editor.seleccionar({ tipo: "seccion", id: sec.id }, true));
     f.addEventListener("dblclick", () => renombrar(f, sec));
     f.addEventListener("dragstart", (ev) => {
+      ev.dataTransfer.setData(F.TIPO_INTERNO, "seccion");
       ev.dataTransfer.setData(TIPO_SECCION, sec.id);
       ev.dataTransfer.effectAllowed = "move";
     });
@@ -155,6 +156,7 @@
       e.textContent = texto;
       if (activo) {
         e.addEventListener("dragstart", (ev) => {
+          ev.dataTransfer.setData(F.TIPO_INTERNO, "nuevo");
           ev.dataTransfer.setData(PREFIJO_NUEVO + tipo, tipo);
           ev.dataTransfer.effectAllowed = "copy";
         });
@@ -180,8 +182,9 @@
       F.Editor.alSoltar(arrastrado, ev.dataTransfer, { zona: "fin", ref: null });
     });
     document.addEventListener("click", cerrarMenu);
-    document.addEventListener("dragend", () => { limpiarMarcas(); F.Hoja.ocultarLinea(); F.Editor.origenArrastrado = null; });
+    document.addEventListener("dragend", () => { limpiarMarcas(); F.Hoja.ocultarLinea(); F.Editor.origenArrastrado = null; F.Editor.arrastreInterno = false; });
     document.addEventListener("dragstart", (ev) => {
+      F.Editor.arrastreInterno = true;
       F.Editor.origenArrastrado = ev.dataTransfer.types.includes(TIPO_SECCION) ? ev.target.dataset.id : null;
     });
     pintarPaleta();

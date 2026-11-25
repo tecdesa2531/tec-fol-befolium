@@ -345,6 +345,8 @@
     if (nuevo) return { clase: "nuevo", tipo: nuevo.slice(F.Arbol.PREFIJO_NUEVO.length) };
     if (tipos.includes(F.Arbol.TIPO_SECCION)) return { clase: "seccion", tipo: "seccion" };
     if (tipos.includes(F.Arbol.TIPO_BLOQUE)) return { clase: "bloque", tipo: "bloque" };
+    // un arrastre que empezo en Folium (aunque el navegador le agregue la imagen como archivo) nunca es un archivo de fuera
+    if (E.arrastreInterno || tipos.includes(F.TIPO_INTERNO)) return null;
     if (tipos.includes("Files")) return { clase: "archivo", tipo: "archivo" };      // archivos de imagen desde el equipo
     return null;
   };
@@ -362,6 +364,7 @@
   /* destino de secciones: { zona: "antes" | "despues" | "dentro" | "fin", ref }
      destino de bloques:   { bloque: true, sid, indice } o { zona: "dentro", ref } (fila del arbol) */
   E.alSoltar = function (arrastrado, dt, destino) {
+    E.arrastreInterno = false;
     const m = E.modelo();
     if (E.esBloque(arrastrado)) {
       const sid = destino.bloque ? destino.sid : destino.ref;

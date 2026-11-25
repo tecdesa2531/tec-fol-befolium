@@ -402,4 +402,20 @@ prueba("estados: agregar, color, uso, renombrar con sus celdas y quitar", () => 
   assert.strictEqual(m.tablaDe("b", t).filas[0].celdas.c1, "Vigente\n22/11/2026");   // las celdas no se tocan al quitar
 });
 
+prueba("mover un bloque de imagen es una sola operacion (un paso en deshacer, sin duplicar)", () => {
+  const m = new Modelo("general", doc());
+  const b = m.agregarImagen("a", null, "x-12345678.png", 50);
+  const total = () => m.doc.secciones.concat(m.doc.secciones[0].secciones).reduce((n, s) => n + (s.bloques || []).length, 0);
+  const antes = total(), pasos = m.antes.length;
+  const nuevo = m.moverBloque("a", b, "b", null);
+  assert.strictEqual(m.antes.length, pasos + 1);
+  assert.strictEqual(total(), antes);
+  assert.deepStrictEqual(m.buscar("b").sec.bloques.map((x) => x.archivo), ["x-12345678.png"]);
+  assert.strictEqual(m.buscar("a").sec.bloques.some((x) => x.archivo), false);
+  m.deshacer();
+  assert.strictEqual(m.buscar("a").sec.bloques.some((x) => x.archivo), true);
+  assert.strictEqual(m.buscar("b").sec.bloques.length, 0);
+  assert.strictEqual(typeof nuevo, "string");
+});
+
 console.log("\n" + pruebas + " pruebas del modelo correctas");
